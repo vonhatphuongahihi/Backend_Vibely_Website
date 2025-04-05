@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -27,29 +28,29 @@ public class User {
     private String coverPicture;
 
     @DBRef
-    private List<User> followers;
+    private List<User> followers = new ArrayList<>();
 
     @DBRef
-    private List<User> followings;
+    private List<User> followings = new ArrayList<>();
 
     @DBRef
-    private List<Post> posts;
+    private List<Post> posts = new ArrayList<>();
 
     @DBRef
-    private List<Post> likedPosts;
+    private List<Post> likedPosts = new ArrayList<>();
 
     @DBRef
-    private List<Post> savedPosts;
+    private List<Post> savedPosts = new ArrayList<>();
 
-    private int postsCount;
-    private int followerCount;
-    private int followingCount;
+    private int postsCount = 0;
+    private int followerCount = 0;
+    private int followingCount = 0;
 
     @DBRef
     private Bio bio;
 
     @DBRef
-    private List<UserDocument> savedDocuments;
+    private List<UserDocument> savedDocuments = new ArrayList<>();
 
     private String verificationCode;
     private Date verificationCodeExpires;
