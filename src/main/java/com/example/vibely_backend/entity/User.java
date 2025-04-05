@@ -1,15 +1,16 @@
 package com.example.vibely_backend.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -27,10 +28,11 @@ public class User {
     private String profilePicture;
     private String coverPicture;
 
-    @DBRef
+    // Dùng @DBRef và load trực tiếp (không lazy)
+    @DBRef(lazy = false)
     private List<User> followers = new ArrayList<>();
 
-    @DBRef
+    @DBRef(lazy = false)
     private List<User> followings = new ArrayList<>();
 
     @DBRef
@@ -46,10 +48,10 @@ public class User {
     private int followerCount = 0;
     private int followingCount = 0;
 
-    @DBRef
+    @DBRef(lazy = true)
     private Bio bio;
 
-    @DBRef
+    @DBRef(lazy = true)
     private List<UserDocument> savedDocuments = new ArrayList<>();
 
     private String verificationCode;
