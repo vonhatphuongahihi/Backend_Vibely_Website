@@ -32,6 +32,7 @@ public class Post {
 
     private ReactionStats reactionStats;
 
+    private int reactionCount;
     private int commentCount;
 
     private List<User> share;
@@ -57,6 +58,7 @@ public class Post {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Comment {
+        private String id;
         @DBRef
         private User user;
 
@@ -73,6 +75,7 @@ public class Post {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Reply {
+        private String id;
         @DBRef
         private User user;
 

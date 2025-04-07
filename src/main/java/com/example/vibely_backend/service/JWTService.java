@@ -57,9 +57,12 @@ public class JWTService {
                 .getPayload();
     }
 
-    public boolean validateToken(String token, UserDetails userDetails) {
-        final String userName = extractUserName(token);
-        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    public boolean validateToken(String token, UserDetails userDetails, String username) {
+        // dang so sanh username va email chu khong phai username và username : loi
+        final String userName = extractUserName(token);  // dang tra ve email 
+        // userDetails.getUsername()  dang tra ve username
+        
+        return (userName.equals(username) && !isTokenExpired(token));
     }
 
     private boolean isTokenExpired(String token) {

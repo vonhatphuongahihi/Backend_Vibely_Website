@@ -9,7 +9,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -25,7 +24,7 @@ public class UserService {
     @Autowired
     private UserRepository repo;
 
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     public User register(User user) {
         log.info("Đăng ký tài khoản: {}", user.getUsername());
