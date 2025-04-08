@@ -38,8 +38,7 @@ public class PostController {
 
     // Tạo bài viết
     @PostMapping
-    public ResponseEntity<?> createPost(@RequestParam(required = false) String content,
-                                       @RequestParam(required = false) MultipartFile file) {
+    public ResponseEntity<?> createPost(@RequestParam(required = false) String content, @RequestParam(required = false) MultipartFile file) {
         System.out.println("createPostcreatePostcreatePostcreatePostcreatePostcreatePost: " + content);
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -63,6 +62,9 @@ public class PostController {
                 } else {
                     mediaType = contentType.startsWith("video") ? "video" : "image";
                 }
+            } else if (content == null || content.trim().isEmpty()) {
+                // Nếu không có file và không có content, trả về lỗi
+                return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Bài viết phải có nội dung hoặc đính kèm file");
             }
 
             // Tạo bài viết mới với các thông số ban đầu
@@ -99,7 +101,7 @@ public class PostController {
 
     // Tạo story
     @PostMapping("/story")
-    public ResponseEntity<?> createStory(@RequestParam(required = false) MultipartFile file) {
+    public ResponseEntity<?> createStory(MultipartFile file) {
         System.out.println("createStorycreateStorycreateStorycreateStorycreateStorycreateStory: " + file);
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
