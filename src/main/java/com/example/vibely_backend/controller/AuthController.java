@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.service.UserService;
 import com.example.vibely_backend.dto.request.RegisterRequest;
+import com.example.vibely_backend.dto.request.LoginRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.servlet.http.Cookie;
@@ -67,9 +68,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse> login(@RequestBody User user, HttpServletResponse response) {
+    public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
         try {
-            log.info("Yêu cầu đăng nhập từ người dùng: {}", user.getUsername());
+            log.info("Yêu cầu đăng nhập từ người dùng: {}", loginRequest.getUsername());
+
+            // Chuyển đổi LoginRequest thành User
+            User user = new User();
+            user.setUsername(loginRequest.getUsername());
+            user.setEmail(loginRequest.getEmail());
+            user.setPassword(loginRequest.getPassword());
 
             String token = service.verify(user);
             log.debug("Đã xác thực người dùng và tạo token: {}", user.getUsername());

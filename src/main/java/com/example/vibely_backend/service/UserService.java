@@ -80,13 +80,24 @@ public class UserService {
         log.info("Đang xác minh tài khoản: {}", usernameOrEmail);
 
         if (usernameOrEmail == null || usernameOrEmail.trim().isEmpty()) {
+            log.warn("Username hoặc email trống");
             throw new RuntimeException("Username hoặc email là bắt buộc");
         }
         if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            log.warn("Mật khẩu trống");
             throw new RuntimeException("Mật khẩu là bắt buộc");
         }
 
+        // Kiểm tra xem tài khoản có tồn tại không
+        boolean userExists = repo.findByUsername(usernameOrEmail).isPresent() ||
+                repo.findByEmail(usernameOrEmail).isPresent();
+        if (!userExists) {
+            log.warn("Tài khoản không tồn tại: {}", usernameOrEmail);
+            throw new RuntimeException("Tài khoản không tồn tại");
+        }
+
         try {
+            log.debug("Bắt đầu xác thực với AuthenticationManager");
             Authentication authentication = authManager
                     .authenticate(new UsernamePasswordAuthenticationToken(usernameOrEmail, user.getPassword()));
             if (authentication.isAuthenticated()) {
