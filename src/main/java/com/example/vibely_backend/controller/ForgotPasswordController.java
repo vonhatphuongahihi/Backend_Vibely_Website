@@ -1,6 +1,8 @@
 package com.example.vibely_backend.controller;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -28,7 +30,7 @@ public class ForgotPasswordController {
     private EmailService emailService;
 
     private String generateVerificationCode() {
-        return String.valueOf((int)(100000 + Math.random() * 900000));
+        return String.valueOf((int) (100000 + Math.random() * 900000));
     }
 
     @PostMapping("/send-code")
@@ -46,7 +48,9 @@ public class ForgotPasswordController {
             User user = optionalUser.get();
             String code = generateVerificationCode();
             user.setVerificationCode(code);
-            user.setVerificationCodeExpires(new Date(System.currentTimeMillis() + 10 * 60 * 1000)); // 10 phút
+
+            // Đặt thời hạn hết hạn là ngày hôm nay + 1 (hoặc theo thời gian cụ thể hơn)
+            user.setVerificationCodeExpires(LocalDate.now().plusDays(1)); // hết hạn sau 1 ngày
             userRepository.save(user);
 
             emailService.sendVerificationCode(email, code);
@@ -78,7 +82,8 @@ public class ForgotPasswordController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            if (user.getVerificationCodeExpires().before(new Date())) {
+            // So sánh thời gian hiện tại với thời gian hết hạn
+            if (LocalDate.now().isAfter(user.getVerificationCodeExpires())) {
                 response.put("message", "Mã xác thực đã hết hạn");
                 return ResponseEntity.badRequest().body(response);
             }
@@ -111,7 +116,7 @@ public class ForgotPasswordController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            if (user.getVerificationCodeExpires().before(new Date())) {
+            if (LocalDate.now().isAfter(user.getVerificationCodeExpires())) {
                 response.put("message", "Mã xác thực đã hết hạn");
                 return ResponseEntity.badRequest().body(response);
             }
