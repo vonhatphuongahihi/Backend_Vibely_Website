@@ -1,7 +1,9 @@
 package com.example.vibely_backend.service;
 
+import com.example.vibely_backend.dto.request.RegisterRequest;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.UserRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
 
 @Slf4j
 @Service
@@ -48,17 +51,19 @@ public class UserService {
             throw new RuntimeException("Email đã tồn tại");
         }
 
-        // Initialize user fields
-        user.setPassword(encoder.encode(user.getPassword()));
+        // Initialize collections
+        user.setFollowers(new ArrayList<>());
+        user.setFollowings(new ArrayList<>());
+        user.setPosts(new ArrayList<>());
+        user.setLikedPosts(new ArrayList<>());
+        user.setSavedPosts(new ArrayList<>());
+        user.setSavedDocuments(new ArrayList<>());
+        user.setProfilePicture("");
+        user.setCoverPicture("");
         user.setPostsCount(0);
         user.setFollowerCount(0);
         user.setFollowingCount(0);
-        user.setProfilePicture("");
-        user.setCoverPicture("");
-        user.setGender("");
-        user.setDateOfBirth(null);
-        user.setVerificationCode(null);
-        user.setVerificationCodeExpires(null);
+        user.setPassword(encoder.encode(user.getPassword()));
 
         try {
             User savedUser = repo.save(user);
@@ -94,5 +99,9 @@ public class UserService {
             log.error("Lỗi xác thực tài khoản {}: {}", usernameOrEmail, e.getMessage());
             throw new RuntimeException("Username/email hoặc password sai");
         }
+    }
+
+    public String generateToken(User user) {
+        return jwtService.generateToken(user.getUsername());
     }
 }
