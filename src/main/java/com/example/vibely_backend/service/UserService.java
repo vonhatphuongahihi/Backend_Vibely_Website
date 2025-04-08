@@ -27,7 +27,7 @@ public class UserService {
     @Autowired
     private UserRepository repo;
 
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     public User register(User user) {
         log.info("Đăng ký tài khoản: {}", user.getUsername());
