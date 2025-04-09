@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**")
+                        .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**", "/schedules/**")
                         .permitAll()
                         .requestMatchers("/admin/change-password").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")

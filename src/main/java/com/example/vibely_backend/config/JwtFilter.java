@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +22,8 @@ import java.io.IOException;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
 
     @Autowired
     private JWTService jwtService;
@@ -39,35 +43,46 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
         String token = null;
-        String username = null;
+        String email = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            username = jwtService.extractUserName(token);
+            try {
+                email = jwtService.extractEmail(token);
+                log.info("Extracted email from token: {}", email);
+            } catch (Exception e) {
+                log.error("Error extracting email from token: {}", e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
         }
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             String path = request.getRequestURI();
 
             try {
                 // Chọn đúng service dựa trên path
                 UserDetails userDetails = path.startsWith("/admin/")
-                        ? adminDetailsService.loadUserByUsername(username)
-                        : userDetailsService.loadUserByUsername(username);
+                        ? adminDetailsService.loadUserByUsername(email)
+                        : userDetailsService.loadUserByUsername(email);
 
-                if (jwtService.validateToken(token, userDetails, username)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,
-                            null, userDetails.getAuthorities());
+                if (jwtService.validateToken(token, userDetails, email)) {
+                    // Tạo authentication với email thay vì username
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            email, // Sử dụng email làm principal
+                            null,
+                            userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-
-                    System.out.println("Authenticated: " + username);
+                    log.info("Authenticated user with email: {}", email);
                 } else {
-                    System.out.println("Token validation failed");
+                    log.warn("Token validation failed for email: {}", email);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
                 }
 
             } catch (Exception e) {
-                System.out.println("Error during authentication: " + e.getMessage());
+                log.error("Error during authentication: {}", e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
