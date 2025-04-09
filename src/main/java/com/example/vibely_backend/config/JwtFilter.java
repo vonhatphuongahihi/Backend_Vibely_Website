@@ -7,9 +7,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -23,11 +25,18 @@ public class JwtFilter extends OncePerRequestFilter {
     private JWTService jwtService;
 
     @Autowired
-    private MyUserDetailsService userDetailsService;
+    @Qualifier("userDetailsService") // hoặc bạn sửa lại tên phù hợp với config
+    private UserDetailsService userDetailsService;
+    @Autowired
+    @Qualifier("adminDetailsService")
+    private UserDetailsService adminDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
+
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
@@ -37,23 +46,30 @@ public class JwtFilter extends OncePerRequestFilter {
             username = jwtService.extractUserName(token);
         }
 
-        System.out.println("username: " + username);
-
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            System.out.println("username success: " + username);
+            String path = request.getRequestURI();
 
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            System.out.println("userDetails: " + userDetails);
+            try {
+                // Chọn đúng service dựa trên path
+                UserDetails userDetails = path.startsWith("/admin/")
+                        ? adminDetailsService.loadUserByUsername(username)
+                        : userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.validateToken(token, userDetails, username)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (jwtService.validateToken(token, userDetails, username)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,
+                            null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                System.out.println("authToken: " + authToken);
-            } else {
-                System.out.println("authToken error: " + userDetails + " token: " + token);
+                    System.out.println("Authenticated: " + username);
+                } else {
+                    System.out.println("Token validation failed");
+                }
+
+            } catch (Exception e) {
+                System.out.println("Error during authentication: " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
             }
         }
 
