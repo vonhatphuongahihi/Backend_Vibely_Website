@@ -88,27 +88,24 @@ public class UserService {
             throw new RuntimeException("Mật khẩu là bắt buộc");
         }
 
-        // Kiểm tra xem tài khoản có tồn tại không
-        boolean userExists = repo.findByUsername(usernameOrEmail).isPresent() ||
-                repo.findByEmail(usernameOrEmail).isPresent();
-        if (!userExists) {
-            log.warn("Tài khoản không tồn tại: {}", usernameOrEmail);
-            throw new RuntimeException("Tài khoản không tồn tại");
-        }
-
         try {
             log.debug("Bắt đầu xác thực với AuthenticationManager");
-            Authentication authentication = authManager
-                    .authenticate(new UsernamePasswordAuthenticationToken(usernameOrEmail, user.getPassword()));
+            Authentication authentication = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(usernameOrEmail, user.getPassword()));
+
             if (authentication.isAuthenticated()) {
-                log.info("Tài khoản xác thực thành công: {}", usernameOrEmail);
+                log.info("Xác thực thành công cho người dùng: {}", usernameOrEmail);
                 return jwtService.generateToken(usernameOrEmail);
+            } else {
+                log.warn("Xác thực thất bại cho người dùng: {}", usernameOrEmail);
+                throw new RuntimeException("Xác thực thất bại");
             }
-            log.warn("Tài khoản xác thực thất bại: {}", usernameOrEmail);
-            throw new RuntimeException("Xác thực thất bại");
         } catch (AuthenticationException e) {
-            log.error("Lỗi xác thực tài khoản {}: {}", usernameOrEmail, e.getMessage());
-            throw new RuntimeException("Username/email hoặc password sai");
+            log.warn("Lỗi xác thực: {}", e.getMessage());
+            throw new RuntimeException("Username hoặc password không đúng");
+        } catch (Exception e) {
+            log.error("Lỗi không xác định trong quá trình xác thực: {}", e.getMessage());
+            throw new RuntimeException("Lỗi xác thực: " + e.getMessage());
         }
     }
 

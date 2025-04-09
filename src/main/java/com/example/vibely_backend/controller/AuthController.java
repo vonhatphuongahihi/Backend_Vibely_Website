@@ -101,4 +101,18 @@ public class AuthController {
             return ResponseEntity.internalServerError().body(new ApiResponse(500, "Lỗi hệ thống", e.getMessage()));
         }
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse> logout(HttpServletResponse response) {
+        // Xóa cookie bằng cách đặt maxAge = 0
+        Cookie cookie = new Cookie("auth_token", "");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true); // HTTPS
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // hết hạn ngay lập tức
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(new ApiResponse(200, "Đăng xuất thành công", null));
+    }
+
 }
