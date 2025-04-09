@@ -44,6 +44,10 @@ public class JWTService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
         final Claims claims = extractAllClaims(token);
         return claimResolver.apply(claims);

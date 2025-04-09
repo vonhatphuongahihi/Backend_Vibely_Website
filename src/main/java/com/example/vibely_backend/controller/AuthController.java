@@ -13,6 +13,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import com.example.vibely_backend.service.JWTService;
 
 @Slf4j
 @RestController
@@ -21,6 +25,12 @@ public class AuthController {
 
     @Autowired
     private UserService service;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private JWTService jwtService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest,
@@ -68,38 +78,29 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
-        try {
-            log.info("Yêu cầu đăng nhập từ người dùng: {}", loginRequest.getUsername());
+    public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest loginRequest) {
+        log.debug("Bắt đầu xác thực với AuthenticationManager");
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
-            // Chuyển đổi LoginRequest thành User
-            User user = new User();
-            user.setUsername(loginRequest.getUsername());
-            user.setEmail(loginRequest.getEmail());
-            user.setPassword(loginRequest.getPassword());
+        log.info("Xác thực thành công cho người dùng: {}", loginRequest.getEmail());
 
-            String token = service.verify(user);
-            log.debug("Đã xác thực người dùng và tạo token: {}", user.getUsername());
+        // Tạo token
+        String token = jwtService.generateToken(loginRequest.getEmail());
+        log.debug("Đã xác thực người dùng và tạo token: {}", token);
 
-            // Thiết lập cookie
-            Cookie cookie = new Cookie("auth_token", token);
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setPath("/");
-            response.addCookie(cookie);
+        // Lấy thông tin người dùng
+        User user = service.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-            Map<String, String> userData = new HashMap<>();
-            userData.put("username", user.getUsername());
-            userData.put("email", user.getEmail());
+        // Tạo response
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", user.getId()); // Sử dụng _id của user
+        data.put("email", user.getEmail());
+        data.put("username", user.getUsername());
+        data.put("token", token);
 
-            return ResponseEntity.ok(new ApiResponse(200, "Đăng nhập thành công", userData));
-        } catch (RuntimeException e) {
-            log.error("Đăng nhập thất bại: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ApiResponse(400, "Đăng nhập thất bại", e.getMessage()));
-        } catch (Exception e) {
-            log.error("Lỗi không xác định trong quá trình đăng nhập: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(500, "Lỗi hệ thống", e.getMessage()));
-        }
+        return ResponseEntity.ok(new ApiResponse(200, "Đăng nhập thành công", data));
     }
 
     @PostMapping("/logout")
