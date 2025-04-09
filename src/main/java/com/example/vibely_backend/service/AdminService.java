@@ -10,14 +10,17 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AdminService {
 
-    @Autowired
-    private AdminRepository adminRepo;
+    private final AdminRepository adminRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
     private JWTService jwtService;
@@ -40,11 +43,11 @@ public class AdminService {
             throw new RuntimeException("Email là bắt buộc");
         }
 
-        if (adminRepo.findByUsername(admin.getUsername()).isPresent()) {
+        if (adminRepository.findByUsername(admin.getUsername()).isPresent()) {
             log.warn("Username admin đã tồn tại: {}", admin.getUsername());
             throw new RuntimeException("Username đã tồn tại");
         }
-        if (adminRepo.findByEmail(admin.getEmail()).isPresent()) {
+        if (adminRepository.findByEmail(admin.getEmail()).isPresent()) {
             log.warn("Email admin đã tồn tại: {}", admin.getEmail());
             throw new RuntimeException("Email đã tồn tại");
         }
@@ -53,7 +56,7 @@ public class AdminService {
         admin.setPassword(encoder.encode(admin.getPassword()));
 
         try {
-            Admin savedAdmin = adminRepo.save(admin);
+            Admin savedAdmin = adminRepository.save(admin);
             log.info("Admin đã đăng ký thành công: {}", savedAdmin.getUsername());
             return savedAdmin;
         } catch (Exception e) {
@@ -73,8 +76,8 @@ public class AdminService {
             throw new RuntimeException("Mật khẩu là bắt buộc");
         }
 
-        boolean exists = adminRepo.findByUsername(usernameOrEmail).isPresent() ||
-                adminRepo.findByEmail(usernameOrEmail).isPresent();
+        boolean exists = adminRepository.findByUsername(usernameOrEmail).isPresent() ||
+                adminRepository.findByEmail(usernameOrEmail).isPresent();
 
         if (!exists) {
             log.warn("Admin không tồn tại: {}", usernameOrEmail);
@@ -99,5 +102,27 @@ public class AdminService {
 
     public String generateToken(Admin admin) {
         return jwtService.generateToken(admin.getUsername());
+    }
+
+    public void updatePassword(String username, String oldPassword, String newPassword) {
+        // Tìm admin theo username
+        Admin admin = adminRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Admin not found with username: " + username));
+
+        System.out.println("🔍 Found admin: " + admin.getUsername());
+
+        // Kiểm tra mật khẩu cũ
+        if (!passwordEncoder.matches(oldPassword, admin.getPassword())) {
+            System.out.println("❌ Old password does not match");
+            throw new RuntimeException("Old password is incorrect");
+        }
+
+        // Hash mật khẩu mới
+        String hashedPassword = passwordEncoder.encode(newPassword);
+        admin.setPassword(hashedPassword);
+
+        // Lưu vào database
+        adminRepository.save(admin);
+        System.out.println("✅ Password updated successfully for admin: " + username);
     }
 }
