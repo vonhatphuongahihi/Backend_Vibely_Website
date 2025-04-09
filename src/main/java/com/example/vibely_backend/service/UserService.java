@@ -1,7 +1,9 @@
 package com.example.vibely_backend.service;
 
+import com.example.vibely_backend.dto.request.RegisterRequest;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.UserRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,6 +12,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -48,17 +52,19 @@ public class UserService {
             throw new RuntimeException("Email đã tồn tại");
         }
 
-        // Initialize user fields
-        user.setPassword(encoder.encode(user.getPassword()));
+        // Initialize collections
+        user.setFollowers(new ArrayList<>());
+        user.setFollowings(new ArrayList<>());
+        user.setPosts(new ArrayList<>());
+        user.setLikedPosts(new ArrayList<>());
+        user.setSavedPosts(new ArrayList<>());
+        user.setSavedDocuments(new ArrayList<>());
+        user.setProfilePicture("");
+        user.setCoverPicture("");
         user.setPostsCount(0);
         user.setFollowerCount(0);
         user.setFollowingCount(0);
-        user.setProfilePicture("");
-        user.setCoverPicture("");
-        user.setGender("");
-        user.setDateOfBirth(null);
-        user.setVerificationCode(null);
-        user.setVerificationCodeExpires(null);
+        user.setPassword(encoder.encode(user.getPassword()));
 
         try {
             User savedUser = repo.save(user);
@@ -75,24 +81,41 @@ public class UserService {
         log.info("Đang xác minh tài khoản: {}", usernameOrEmail);
 
         if (usernameOrEmail == null || usernameOrEmail.trim().isEmpty()) {
+            log.warn("Username hoặc email trống");
             throw new RuntimeException("Username hoặc email là bắt buộc");
         }
         if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            log.warn("Mật khẩu trống");
             throw new RuntimeException("Mật khẩu là bắt buộc");
         }
 
         try {
-            Authentication authentication = authManager
-                    .authenticate(new UsernamePasswordAuthenticationToken(usernameOrEmail, user.getPassword()));
+            log.debug("Bắt đầu xác thực với AuthenticationManager");
+            Authentication authentication = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(usernameOrEmail, user.getPassword()));
+
             if (authentication.isAuthenticated()) {
-                log.info("Tài khoản xác thực thành công: {}", usernameOrEmail);
+                log.info("Xác thực thành công cho người dùng: {}", usernameOrEmail);
                 return jwtService.generateToken(usernameOrEmail);
+            } else {
+                log.warn("Xác thực thất bại cho người dùng: {}", usernameOrEmail);
+                throw new RuntimeException("Xác thực thất bại");
             }
-            log.warn("Tài khoản xác thực thất bại: {}", usernameOrEmail);
-            throw new RuntimeException("Xác thực thất bại");
         } catch (AuthenticationException e) {
-            log.error("Lỗi xác thực tài khoản {}: {}", usernameOrEmail, e.getMessage());
-            throw new RuntimeException("Username/email hoặc password sai");
+            log.warn("Lỗi xác thực: {}", e.getMessage());
+            throw new RuntimeException("Username hoặc password không đúng");
+        } catch (Exception e) {
+            log.error("Lỗi không xác định trong quá trình xác thực: {}", e.getMessage());
+            throw new RuntimeException("Lỗi xác thực: " + e.getMessage());
         }
+    }
+
+    public String generateToken(User user) {
+        return jwtService.generateToken(user.getUsername());
+    }
+
+    public Optional<User> findByEmail(String email) {
+        log.debug("Tìm user với email: {}", email);
+        return repo.findByEmail(email);
     }
 }

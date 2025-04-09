@@ -44,6 +44,10 @@ public class JWTService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
         final Claims claims = extractAllClaims(token);
         return claimResolver.apply(claims);
@@ -59,9 +63,9 @@ public class JWTService {
 
     public boolean validateToken(String token, UserDetails userDetails, String username) {
         // dang so sanh username va email chu khong phai username và username : loi
-        final String userName = extractUserName(token);  // dang tra ve email 
-        // userDetails.getUsername()  dang tra ve username
-        
+        final String userName = extractUserName(token); // dang tra ve email
+        // userDetails.getUsername() dang tra ve username
+
         return (userName.equals(username) && !isTokenExpired(token));
     }
 

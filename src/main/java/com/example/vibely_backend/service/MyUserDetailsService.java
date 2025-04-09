@@ -4,12 +4,14 @@ import com.example.vibely_backend.entity.UserPrincipal;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
+@Qualifier("userDetailsService")
 public class MyUserDetailsService implements UserDetailsService {
 
     @Autowired

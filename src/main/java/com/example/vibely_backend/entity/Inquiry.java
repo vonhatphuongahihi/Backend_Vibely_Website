@@ -1,36 +1,36 @@
 package com.example.vibely_backend.entity;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "documents")
-public class UserDocument {
-
+@Document(collection = "inquiries")
+public class Inquiry {
     @Id
     private String id;
 
-    private String title;
-    private int pages;
-
     @DBRef
-    private Level level;
+    private User user;
 
-    @DBRef
-    private Subject subject;
+    private String message;
+    private String status;
+    private String response;
 
-    private String fileType;
-    private Date uploadDate;
-    private String fileUrl;
-
+    @CreatedDate
     private Date createdAt;
+
+    @LastModifiedDate
     private Date updatedAt;
 }
