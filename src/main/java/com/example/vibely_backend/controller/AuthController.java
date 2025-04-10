@@ -115,5 +115,14 @@ public class AuthController {
 
         return ResponseEntity.ok(new ApiResponse(200, "Đăng xuất thành công", null));
     }
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyLogin(@RequestBody User user) {
+        try {
+            String token = service.verify(user);
+            return ResponseEntity.ok(Map.of("token", token));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 
 }
