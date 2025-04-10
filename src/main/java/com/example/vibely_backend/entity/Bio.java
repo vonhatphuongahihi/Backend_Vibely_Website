@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.Date;
 
@@ -26,7 +27,9 @@ public class Bio {
     private String hometown;
 
     @DBRef
+    @JsonIgnore
     private User user;
+    
 
     private Date createdAt;
     private Date updatedAt;

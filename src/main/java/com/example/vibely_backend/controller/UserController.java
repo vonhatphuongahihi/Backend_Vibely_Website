@@ -1,8 +1,11 @@
 package com.example.vibely_backend.controller;
 
+import com.example.vibely_backend.dto.request.BioRequest;
 import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
+import com.example.vibely_backend.entity.Bio;
 import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.repository.BioRepository;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
 import com.example.vibely_backend.service.JWTService;
@@ -10,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.Date;
 
 import java.util.Map;
 
@@ -68,5 +72,47 @@ public class UserController {
         return ResponseEntity.badRequest().body(new ApiResponse(400, "Lỗi khi cập nhật hồ sơ", e.getMessage()));
     }
 }
+    @Autowired
+private BioRepository bioRepository;
+
+@PutMapping("/bio")
+public ResponseEntity<?> updateUserBio(
+        @RequestHeader("Authorization") String authHeader,
+        @RequestBody BioRequest bioRequest
+) {
+    try {
+        String token = authHeader.replace("Bearer ", "");
+        String userId = jwtService.extractUserIdFromToken(token);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        Bio bio = bioRepository.findByUser(user).orElseGet(() -> {
+            Bio newBio = new Bio();
+            newBio.setUser(user);
+            newBio.setCreatedAt(new Date());
+            return newBio;
+        });
+
+        bio.setBioText(bioRequest.getBioText());
+        bio.setLiveIn(bioRequest.getLiveIn());
+        bio.setRelationship(bioRequest.getRelationship());
+        bio.setWorkplace(bioRequest.getWorkplace());
+        bio.setEducation(bioRequest.getEducation());
+        bio.setPhone(bioRequest.getPhone());
+        bio.setHometown(bioRequest.getHometown());
+        bio.setUpdatedAt(new Date());
+
+        Bio savedBio = bioRepository.save(bio);
+
+        user.setBio(savedBio);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new ApiResponse(200, "Cập nhật tiểu sử thành công", savedBio));
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body(new ApiResponse(400, "Lỗi khi cập nhật tiểu sử", e.getMessage()));
+    }
+}
+
 
 }
