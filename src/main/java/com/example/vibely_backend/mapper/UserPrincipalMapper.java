@@ -26,11 +26,7 @@ public class UserPrincipalMapper {
     user.setDateOfBirth(dateOfBirth);  // Thiết lập ngày sinh
     user.setProfilePicture(profilePicture);  // Thiết lập ảnh đại diện
     user.setCoverPicture(coverPicture);  // Thiết lập ảnh bìa
-    user.setPostsCount(0);  // Khởi tạo số bài viết
-    user.setFollowerCount(0);  // Khởi tạo số người theo dõi
-    user.setFollowingCount(0);  // Khởi tạo số người mà người dùng đang theo dõi
-    user.setVerificationCode(null);  // Có thể thiết lập mã xác minh nếu cần
-    user.setVerificationCodeExpires(null);  // Thời gian hết hạn mã xác minh
+
 
     return user;  // Trả về đối tượng User đã tạo
     }
