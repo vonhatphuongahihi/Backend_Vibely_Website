@@ -62,7 +62,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             try {
                 // Chọn đúng service dựa trên path
-                UserDetails userDetails = path.startsWith("/admin/")
+                UserDetails userDetails = path.matches(".*/admin/.*")
                         ? adminDetailsService.loadUserByUsername(email)
                         : userDetailsService.loadUserByUsername(email);
 
