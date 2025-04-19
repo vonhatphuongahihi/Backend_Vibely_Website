@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
-public class UserController {
+public class AdminUserController {
 
     @Autowired
     private UserRepository userRepository;
@@ -25,17 +25,20 @@ public class UserController {
 
     // Lấy danh sách tất cả users
     @GetMapping
-    public ResponseEntity<?> getAllUsers() {
+    public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
         try {
             List<User> users = userRepository.findAll().stream()
                     .peek(u -> u.setPassword(null)) // Ẩn password
                     .collect(Collectors.toList());
-
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy danh sách người dùng thành công", users));
+    
+            ApiResponse<List<User>> response = new ApiResponse<>(200, "Lấy danh sách người dùng thành công", users);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(500, "Lỗi khi lấy danh sách người dùng", e.getMessage()));
+            ApiResponse<String> errorResponse = new ApiResponse<>(500, "Lỗi khi lấy danh sách người dùng", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+    
 
     // Xóa user theo ID
     @DeleteMapping("/{userId}")
