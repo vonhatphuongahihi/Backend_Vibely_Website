@@ -1,29 +1,20 @@
 package com.example.vibely_backend.service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationResults;
-import org.springframework.data.mongodb.core.aggregation.DateOperators;
-import org.springframework.data.mongodb.core.aggregation.GroupOperation;
-import org.springframework.data.mongodb.core.aggregation.MatchOperation;
-import org.springframework.data.mongodb.core.aggregation.SortOperation;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.stereotype.Service;
-
-import com.example.vibely_backend.repository.DocumentRepository;
-import com.example.vibely_backend.repository.InquiryRepository;
-import com.example.vibely_backend.repository.PostRepository;
-import com.example.vibely_backend.repository.UserRepository;
+import java.util.*;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.*;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.stereotype.Service;
+
+import com.example.vibely_backend.repository.*;
+import com.example.vibely_backend.entity.*;
 
 @Service
 @RequiredArgsConstructor
@@ -44,12 +35,96 @@ public class AdminDashboardService {
         dashboardData.put("totalDocuments", getTotalDocuments());
         dashboardData.put("totalInquiries", getTotalInquiries());
 
-        dashboardData.put("usersData", groupByTime("user", timeUnit));
-        dashboardData.put("postsData", groupByTime("post", timeUnit));
-        dashboardData.put("documentsData", groupByTime("document", timeUnit));
-        dashboardData.put("inquiriesData", groupByTime("inquiry", timeUnit));
+        dashboardData.put("usersData", groupByTime(User.class, timeUnit));
+        dashboardData.put("postsData", groupByTime(Post.class, timeUnit));
+        dashboardData.put("documentsData", groupByTime(DocumentUser.class, timeUnit));
+        dashboardData.put("inquiriesData", groupByTime(Inquiry.class, timeUnit));
 
         return dashboardData;
+    }
+
+    public Map<String, Object> getDashboardStats(String timeUnit) {
+        Map<String, Object> stats = new HashMap<>();
+
+        stats.put("usersStats", groupByTime(User.class, timeUnit));
+        stats.put("postsStats", groupByTime(Post.class, timeUnit));
+        stats.put("documentsStats", groupByTime(DocumentUser.class, timeUnit));
+        stats.put("inquiriesStats", groupByTime(Inquiry.class, timeUnit));
+
+        return stats;
+    }
+
+    private List<Map<String, Object>> groupByTime(Class<?> entityClass, String timeUnit) {
+        LocalDateTime startOfYear = LocalDateTime.now().withDayOfYear(1).withHour(0).withMinute(0).withSecond(0);
+        Date startDate = Date.from(startOfYear.atZone(ZoneId.systemDefault()).toInstant());
+
+        MatchOperation matchStage = Aggregation.match(
+                Criteria.where("createdAt").gte(startDate));
+
+        ProjectionOperation projectStage;
+        GroupOperation groupStage;
+        SortOperation sortStage;
+
+        switch (timeUnit.toLowerCase()) {
+            case "day":
+                projectStage = Aggregation.project()
+                        .and(DateOperators.Year.yearOf("createdAt")).as("year")
+                        .and(DateOperators.Month.monthOf("createdAt")).as("month")
+                        .and(DateOperators.DayOfMonth.dayOfMonth("createdAt")).as("day");
+
+                groupStage = Aggregation.group("year", "month", "day")
+                        .count().as("count");
+
+                sortStage = Aggregation.sort(Sort.Direction.ASC, "_id.year", "_id.month", "_id.day");
+                break;
+
+            case "month":
+                projectStage = Aggregation.project()
+                        .and(DateOperators.Year.yearOf("createdAt")).as("year")
+                        .and(DateOperators.Month.monthOf("createdAt")).as("month");
+
+                groupStage = Aggregation.group("year", "month")
+                        .count().as("count");
+
+                sortStage = Aggregation.sort(Sort.Direction.ASC, "_id.year", "_id.month");
+                break;
+
+            default: // year
+                projectStage = Aggregation.project()
+                        .and(DateOperators.Year.yearOf("createdAt")).as("year");
+
+                groupStage = Aggregation.group("year")
+                        .count().as("count");
+
+                sortStage = Aggregation.sort(Sort.Direction.ASC, "_id.year");
+                break;
+        }
+
+        String collectionName = getCollectionName(entityClass);
+
+        Aggregation aggregation = Aggregation.newAggregation(
+                matchStage, projectStage, groupStage, sortStage);
+
+        AggregationResults<Map> results = mongoTemplate.aggregate(
+                aggregation, collectionName, Map.class);
+
+        List<Map<String, Object>> mappedResults = new ArrayList<>();
+        for (Map map : results.getMappedResults()) {
+            mappedResults.add((Map<String, Object>) map);
+        }
+        return mappedResults;
+    }
+
+    private String getCollectionName(Class<?> entityClass) {
+        if (entityClass == User.class)
+            return "users";
+        if (entityClass == Post.class)
+            return "posts";
+        if (entityClass == DocumentUser.class)
+            return "documents";
+        if (entityClass == Inquiry.class)
+            return "inquiries";
+        throw new IllegalArgumentException("Unknown entity class: " + entityClass.getSimpleName());
     }
 
     public long getTotalUsers() {
@@ -66,69 +141,5 @@ public class AdminDashboardService {
 
     public long getTotalInquiries() {
         return inquiryRepository.count();
-    }
-
-    public Map<String, Object> getDashboardStats(String timeUnit) {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("usersStats", groupByTime("user", timeUnit));
-        stats.put("postsStats", groupByTime("post", timeUnit));
-        stats.put("documentsStats", groupByTime("document", timeUnit));
-        stats.put("inquiriesStats", groupByTime("inquiry", timeUnit));
-        return stats;
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> groupByTime(String collectionName, String timeUnit) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.MONTH, Calendar.JANUARY);
-        calendar.set(Calendar.DAY_OF_MONTH, 1);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        Date startDate = calendar.getTime();
-
-        log.info("Lấy dữ liệu {} từ ngày {}", collectionName, startDate);
-
-        String isoStartDate = startDate.toInstant().toString();
-
-        MatchOperation matchOperation = Aggregation.match(
-                Criteria.where("createdAt").gte(isoStartDate));
-
-        GroupOperation groupOperation;
-        if (timeUnit.equals("day")) {
-            groupOperation = Aggregation.group(
-                    DateOperators.Year.yearOf("createdAt").toString(),
-                    DateOperators.Month.monthOf("createdAt").toString(),
-                    DateOperators.DayOfMonth.dayOfMonth("createdAt").toString())
-                    .count().as("count");
-        } else if (timeUnit.equals("month")) {
-            groupOperation = Aggregation.group(
-                    DateOperators.Year.yearOf("createdAt").toString(),
-                    DateOperators.Month.monthOf("createdAt").toString())
-                    .count().as("count");
-        } else {
-            groupOperation = Aggregation.group(
-                    DateOperators.Year.yearOf("createdAt").toString())
-                    .count().as("count");
-        }
-
-        SortOperation sortOperation = Aggregation.sort(
-                org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Order.asc("_id.year"),
-                        org.springframework.data.domain.Sort.Order.asc("_id.month"),
-                        org.springframework.data.domain.Sort.Order.asc("_id.day")));
-
-        Aggregation aggregation = Aggregation.newAggregation(
-                matchOperation,
-                groupOperation,
-                sortOperation);
-
-        log.info("Aggregation pipeline: {}", aggregation);
-
-        AggregationResults<Map> results = mongoTemplate.aggregate(aggregation, collectionName, Map.class);
-        List<Map<String, Object>> data = (List<Map<String, Object>>) (List<?>) results.getMappedResults();
-
-        log.info("Kết quả {}: {}", collectionName, data);
-        return data;
     }
 }
