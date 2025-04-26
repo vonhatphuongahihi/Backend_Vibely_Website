@@ -104,25 +104,17 @@ public class AdminService {
         return jwtService.generateToken(admin.getUsername());
     }
 
-    public void updatePassword(String username, String oldPassword, String newPassword) {
-        // Tìm admin theo username
-        Admin admin = adminRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Admin not found with username: " + username));
+    public void updatePassword(String email, String oldPassword, String newPassword) {
+        Admin admin = adminRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy admin: " + email));
 
-        System.out.println("🔍 Found admin: " + admin.getUsername());
-
-        // Kiểm tra mật khẩu cũ
         if (!passwordEncoder.matches(oldPassword, admin.getPassword())) {
-            System.out.println("❌ Old password does not match");
-            throw new RuntimeException("Old password is incorrect");
+            throw new RuntimeException("Mật khẩu cũ không đúng");
         }
 
-        // Hash mật khẩu mới
         String hashedPassword = passwordEncoder.encode(newPassword);
         admin.setPassword(hashedPassword);
 
-        // Lưu vào database
         adminRepository.save(admin);
-        System.out.println("✅ Password updated successfully for admin: " + username);
     }
 }

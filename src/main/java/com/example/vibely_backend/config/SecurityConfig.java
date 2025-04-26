@@ -46,7 +46,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**", "/schedules/**")
                         .permitAll()
-                        .requestMatchers("/admin/change-password").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated())
                 .oauth2Login(Customizer.withDefaults())

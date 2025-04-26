@@ -15,19 +15,18 @@ public class AdminUpdatePasswordController {
 
     private final AdminService adminService;
 
-    @PutMapping("/change-password")
+    @PutMapping("/auth/update-password")
     public ResponseEntity<?> updatePassword(
             @Valid @RequestBody UpdatePasswordRequest request,
             Authentication authentication) {
         try {
             // Lấy username từ token
             String username = authentication.getName();
-            System.out.println("Updating password for admin: " + username);
 
             adminService.updatePassword(username, request.getOldPassword(), request.getNewPassword());
-            return ResponseEntity.ok().body("Password updated successfully");
+            return ResponseEntity.ok().body("Cập nhật mật khẩu thành công");
         } catch (Exception e) {
-            System.out.println("Error updating password: " + e.getMessage());
+            System.out.println("Không thể cập nhật mật khẩu: " + e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
