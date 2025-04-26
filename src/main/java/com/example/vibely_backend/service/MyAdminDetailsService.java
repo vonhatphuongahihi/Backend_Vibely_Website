@@ -24,18 +24,16 @@ public class MyAdminDetailsService implements UserDetailsService {
     private AdminRepository adminRepo;
 
     @Override
-    public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        log.info("Loading admin by email: {}", email);
 
-        Optional<Admin> adminOpt = adminRepo.findByEmail(usernameOrEmail);
-        if (adminOpt.isEmpty()) {
-            adminOpt = adminRepo.findByUsername(usernameOrEmail);
-        }
-
-        Admin admin = adminOpt.orElseThrow(
-                () -> {
-                    return new UsernameNotFoundException("Không tìm thấy admin với username/email: " + usernameOrEmail);
+        Admin admin = adminRepo.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.warn("Admin not found with email: {}", email);
+                    return new UsernameNotFoundException("Không tìm thấy admin với email: " + email);
                 });
 
+        log.info("Admin found: {}", admin.getEmail());
         return new AdminPrincipal(admin);
     }
 }
