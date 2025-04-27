@@ -56,10 +56,10 @@ public class AdminDashboardController {
             dashboardData.put("inquiriesData", stats.get("inquiriesStats"));
 
             log.info("Dashboard data: {}", dashboardData);
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy dữ liệu dashboard thành công", dashboardData));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy dữ liệu dashboard thành công", dashboardData));
         } catch (Exception e) {
             log.error("Lỗi khi lấy dữ liệu dashboard: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -84,10 +84,10 @@ public class AdminDashboardController {
             }
 
             log.info("Dashboard stats: {}", stats);
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy thống kê thành công", stats));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy thống kê thành công", stats));
         } catch (Exception e) {
             log.error("Lỗi khi lấy thống kê: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -96,10 +96,10 @@ public class AdminDashboardController {
     public ResponseEntity<ApiResponse> getTotalUsers() {
         try {
             long totalUsers = adminDashboardService.getTotalUsers();
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy tổng số người dùng thành công", totalUsers));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy tổng số người dùng thành công", totalUsers));
         } catch (Exception e) {
             log.error("Lỗi khi lấy tổng số người dùng: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -108,10 +108,10 @@ public class AdminDashboardController {
     public ResponseEntity<ApiResponse> getTotalPosts() {
         try {
             long totalPosts = adminDashboardService.getTotalPosts();
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy tổng số bài viết thành công", totalPosts));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy tổng số bài viết thành công", totalPosts));
         } catch (Exception e) {
             log.error("Lỗi khi lấy tổng số bài viết: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -120,10 +120,10 @@ public class AdminDashboardController {
     public ResponseEntity<ApiResponse> getTotalDocuments() {
         try {
             long totalDocuments = adminDashboardService.getTotalDocuments();
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy tổng số tài liệu thành công", totalDocuments));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy tổng số tài liệu thành công", totalDocuments));
         } catch (Exception e) {
             log.error("Lỗi khi lấy tổng số tài liệu: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -132,10 +132,10 @@ public class AdminDashboardController {
     public ResponseEntity<ApiResponse> getTotalInquiries() {
         try {
             long totalInquiries = adminDashboardService.getTotalInquiries();
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy tổng số câu hỏi thành công", totalInquiries));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy tổng số câu hỏi thành công", totalInquiries));
         } catch (Exception e) {
             log.error("Lỗi khi lấy tổng số câu hỏi: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 }
