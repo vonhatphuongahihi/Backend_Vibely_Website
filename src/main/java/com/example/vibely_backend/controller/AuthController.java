@@ -44,7 +44,7 @@ public class AuthController {
             user.setEmail(registerRequest.getEmail());
             user.setPassword(registerRequest.getPassword());
             user.setGender(registerRequest.getGender());
-            user.setDateOfBirth(registerRequest.getDateOfBirth());
+            user.setDateOfBirth(registerRequest.getDateOfBirthAsLocalDate());
 
             log.debug("Đang chuyển đổi RegisterRequest thành User: {}", user);
 
@@ -67,13 +67,13 @@ public class AuthController {
             userData.put("username", registeredUser.getUsername());
             userData.put("email", registeredUser.getEmail());
 
-            return ResponseEntity.status(201).body(new ApiResponse(201, "Đăng ký thành công", userData));
+            return ResponseEntity.status(201).body(new ApiResponse("success", "Đăng ký thành công", userData));
         } catch (RuntimeException e) {
             log.error("Đăng ký thất bại: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ApiResponse(400, "Đăng ký thất bại", e.getMessage()));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Đăng ký thất bại", e.getMessage()));
         } catch (Exception e) {
             log.error("Lỗi không xác định trong quá trình đăng ký: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(500, "Lỗi hệ thống", e.getMessage()));
+            return ResponseEntity.internalServerError().body(new ApiResponse("error", "Lỗi hệ thống", e.getMessage()));
         }
     }
 
@@ -100,7 +100,7 @@ public class AuthController {
         data.put("username", user.getUsername());
         data.put("token", token);
 
-        return ResponseEntity.ok(new ApiResponse(200, "Đăng nhập thành công", data));
+        return ResponseEntity.ok(new ApiResponse("success", "Đăng nhập thành công", data));
     }
 
     @PostMapping("/logout")
@@ -113,7 +113,7 @@ public class AuthController {
         cookie.setMaxAge(0); // hết hạn ngay lập tức
         response.addCookie(cookie);
 
-        return ResponseEntity.ok(new ApiResponse(200, "Đăng xuất thành công", null));
+        return ResponseEntity.ok(new ApiResponse("success", "Đăng xuất thành công", null));
     }
     @PostMapping("/verify")
     public ResponseEntity<?> verifyLogin(@RequestBody User user) {
