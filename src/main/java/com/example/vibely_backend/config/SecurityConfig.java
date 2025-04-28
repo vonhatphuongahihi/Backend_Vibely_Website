@@ -44,11 +44,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**", "/schedules/**")
+                        .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**", "/schedules/**",
+                                "/users/**")
                         .permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated())
-                .oauth2Login(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(userAuthenticationProvider())
                 .authenticationProvider(adminAuthenticationProvider())
@@ -87,7 +87,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3001", "http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3001", "http://localhost:3000",
+                "http://127.0.0.1:3001", "http://127.0.0.1:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

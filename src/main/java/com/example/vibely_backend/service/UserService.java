@@ -118,4 +118,37 @@ public class UserService {
         log.debug("Tìm user với email: {}", email);
         return repo.findByEmail(email);
     }
+
+    public User save(User user) {
+        log.info("Lưu thông tin user: {}", user.getEmail());
+        try {
+            User savedUser = repo.save(user);
+            log.info("Lưu thông tin user thành công: {}", savedUser.getEmail());
+            return savedUser;
+        } catch (Exception e) {
+            log.error("Lỗi khi lưu thông tin user: {}", e.getMessage());
+            throw new RuntimeException("Lỗi khi lưu thông tin user: " + e.getMessage());
+        }
+    }
+
+    public void changePassword(String email, String oldPassword, String newPassword) {
+        log.info("Đổi mật khẩu cho user: {}", email);
+        try {
+            User user = repo.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+
+            // Kiểm tra mật khẩu cũ
+            if (!encoder.matches(oldPassword, user.getPassword())) {
+                throw new RuntimeException("Mật khẩu cũ không đúng");
+            }
+
+            // Cập nhật mật khẩu mới
+            user.setPassword(encoder.encode(newPassword));
+            repo.save(user);
+            log.info("Đổi mật khẩu thành công cho user: {}", email);
+        } catch (Exception e) {
+            log.error("Lỗi khi đổi mật khẩu: {}", e.getMessage());
+            throw new RuntimeException("Lỗi khi đổi mật khẩu: " + e.getMessage());
+        }
+    }
 }

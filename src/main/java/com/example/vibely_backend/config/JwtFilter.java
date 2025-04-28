@@ -1,7 +1,6 @@
 package com.example.vibely_backend.config;
 
 import com.example.vibely_backend.service.JWTService;
-import com.example.vibely_backend.service.MyUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,10 +28,11 @@ public class JwtFilter extends OncePerRequestFilter {
     private JWTService jwtService;
 
     @Autowired
-    @Qualifier("userDetailsService") // hoặc bạn sửa lại tên phù hợp với config
+    @Qualifier("myUserDetailsService")
     private UserDetailsService userDetailsService;
+
     @Autowired
-    @Qualifier("adminDetailsService")
+    @Qualifier("myAdminDetailsService")
     private UserDetailsService adminDetailsService;
 
     @Override
@@ -59,17 +59,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             String path = request.getRequestURI();
+            UserDetails userDetails = null;
 
             try {
                 // Chọn đúng service dựa trên path
-                UserDetails userDetails = path.startsWith("/admin/")
-                        ? adminDetailsService.loadUserByUsername(email)
-                        : userDetailsService.loadUserByUsername(email);
+                if (path.startsWith("/admin/")) {
+                    userDetails = adminDetailsService.loadUserByUsername(email);
+                } else {
+                    userDetails = userDetailsService.loadUserByUsername(email);
+                }
 
                 if (jwtService.validateToken(token, userDetails, email)) {
-                    // Tạo authentication với email thay vì username
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            email, // Sử dụng email làm principal
+                            email,
                             null,
                             userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

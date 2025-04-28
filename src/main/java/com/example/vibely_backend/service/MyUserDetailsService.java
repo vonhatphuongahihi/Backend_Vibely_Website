@@ -11,7 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
-@Qualifier("userDetailsService")
+@Qualifier("myUserDetailsService")
 public class MyUserDetailsService implements UserDetailsService {
 
     @Autowired

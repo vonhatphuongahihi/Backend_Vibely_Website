@@ -21,6 +21,8 @@ import com.example.vibely_backend.service.JWTService;
 @Slf4j
 @RestController
 @RequestMapping("/auth")
+@CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
+        "http://127.0.0.1:3000" }, allowCredentials = "true")
 public class AuthController {
 
     @Autowired
@@ -38,7 +40,6 @@ public class AuthController {
         try {
             log.info("Nhận yêu cầu đăng ký từ người dùng: {}", registerRequest.getUsername());
 
-            // Chuyển đổi RegisterRequest thành User
             User user = new User();
             user.setUsername(registerRequest.getUsername());
             user.setEmail(registerRequest.getEmail());
@@ -46,26 +47,22 @@ public class AuthController {
             user.setGender(registerRequest.getGender());
             user.setDateOfBirth(registerRequest.getDateOfBirthAsLocalDate());
 
-            log.debug("Đang chuyển đổi RegisterRequest thành User: {}", user);
-
             User registeredUser = service.register(user);
             log.info("Đăng ký người dùng thành công: {}", registeredUser.getUsername());
 
-            // Tạo token JWT
             String token = service.generateToken(registeredUser);
             log.debug("Đã tạo token JWT cho người dùng: {}", registeredUser.getUsername());
 
-            // Thiết lập cookie
             Cookie cookie = new Cookie("auth_token", token);
             cookie.setHttpOnly(true);
-            cookie.setSecure(true); // cho HTTPS
+            cookie.setSecure(true);
             cookie.setPath("/");
             response.addCookie(cookie);
 
-            // Tạo dữ liệu phản hồi
             Map<String, Object> userData = new HashMap<>();
             userData.put("username", registeredUser.getUsername());
             userData.put("email", registeredUser.getEmail());
+            userData.put("token", token);
 
             return ResponseEntity.status(201).body(new ApiResponse("success", "Đăng ký thành công", userData));
         } catch (RuntimeException e) {
@@ -79,41 +76,41 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest loginRequest) {
-        log.debug("Bắt đầu xác thực với AuthenticationManager");
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+        try {
+            log.debug("Bắt đầu xác thực với AuthenticationManager");
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
-        log.info("Xác thực thành công cho người dùng: {}", loginRequest.getEmail());
+            log.info("Xác thực thành công cho người dùng: {}", loginRequest.getEmail());
 
-        // Tạo token
-        String token = jwtService.generateToken(loginRequest.getEmail());
-        log.debug("Đã xác thực người dùng và tạo token: {}", token);
+            String token = jwtService.generateToken(loginRequest.getEmail());
+            log.debug("Đã xác thực người dùng và tạo token: {}", token);
 
-        // Lấy thông tin người dùng
-        User user = service.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            User user = service.findByEmail(loginRequest.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Tạo response
-        Map<String, Object> data = new HashMap<>();
-        data.put("userId", user.getId()); // Sử dụng _id của user
-        data.put("email", user.getEmail());
-        data.put("username", user.getUsername());
-        data.put("token", token);
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", user.getId());
+            data.put("email", user.getEmail());
+            data.put("username", user.getUsername());
+            data.put("token", token);
 
-        return ResponseEntity.ok(new ApiResponse("success", "Đăng nhập thành công", data));
+            return ResponseEntity.ok(new ApiResponse("success", "Đăng nhập thành công", data));
+        } catch (Exception e) {
+            log.error("Đăng nhập thất bại: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Đăng nhập thất bại", e.getMessage()));
+        }
     }
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse> logout(HttpServletResponse response) {
-        // Xóa cookie bằng cách đặt maxAge = 0
         Cookie cookie = new Cookie("auth_token", "");
         cookie.setHttpOnly(true);
-        cookie.setSecure(true); // HTTPS
+        cookie.setSecure(true);
         cookie.setPath("/");
-        cookie.setMaxAge(0); // hết hạn ngay lập tức
+        cookie.setMaxAge(0);
         response.addCookie(cookie);
 
         return ResponseEntity.ok(new ApiResponse("success", "Đăng xuất thành công", null));
     }
-
 }
