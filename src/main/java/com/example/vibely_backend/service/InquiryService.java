@@ -24,11 +24,11 @@ public class InquiryService {
 
     public ApiResponse createInquiry(String userId, String message) {
         if (message == null || message.isBlank()) {
-            return new ApiResponse(400, "Vui lòng điền đầy đủ thông tin.", null);
+            return new ApiResponse("error", "Vui lòng điền đầy đủ thông tin.", null);
         }
 
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
 
         Inquiry inquiry = new Inquiry();
         inquiry.setUserId(user.getId());
@@ -38,7 +38,7 @@ public class InquiryService {
 
         inquiryRepository.save(inquiry);
 
-        return new ApiResponse(201, "Thắc mắc đã được gửi!", inquiry);
+        return new ApiResponse("success", "Thắc mắc đã được gửi!", inquiry);
     }
 
     public ApiResponse getInquiries(String query, String status) {
@@ -48,7 +48,8 @@ public class InquiryService {
 
         for (Inquiry i : all) {
             User user = userRepository.findById(i.getUserId()).orElse(null);
-            if (user == null) continue;
+            if (user == null)
+                continue;
 
             boolean matchStatus = (status == null || status.isBlank() || i.getStatus().equalsIgnoreCase(status));
 
@@ -57,7 +58,7 @@ public class InquiryService {
                 String lowerQuery = query.toLowerCase();
                 boolean inMessage = i.getMessage().toLowerCase().contains(lowerQuery);
                 boolean inUser = user.getUsername().toLowerCase().contains(lowerQuery) ||
-                                 user.getEmail().toLowerCase().contains(lowerQuery);
+                        user.getEmail().toLowerCase().contains(lowerQuery);
                 matchQuery = inMessage || inUser;
             }
 
@@ -78,50 +79,49 @@ public class InquiryService {
             }
         }
 
-        return new ApiResponse(200, "Lấy danh sách thắc mắc thành công!", result);
+        return new ApiResponse("success", "Lấy danh sách thắc mắc thành công!", result);
     }
 
     public ApiResponse updateInquiry(String id, String status, String response) {
         if (status == null || status.isBlank() || response == null || response.isBlank()) {
-            return new ApiResponse(400, "Vui lòng điền đầy đủ thông tin.", null);
+            return new ApiResponse("error", "Vui lòng điền đầy đủ thông tin.", null);
         }
 
         Inquiry inquiry = inquiryRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy thắc mắc."));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thắc mắc."));
 
         inquiry.setStatus(status);
         inquiry.setResponse(response);
         inquiryRepository.save(inquiry);
 
         User user = userRepository.findById(inquiry.getUserId())
-            .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
 
         emailService.sendInquiryResponseEmail(
-            user.getEmail(),
-            inquiry.getResponse(),
-            user.getUsername()
-        );
+                user.getEmail(),
+                inquiry.getResponse(),
+                user.getUsername());
 
         InquiryResponse inq = new InquiryResponse();
-            inq.setId(inquiry.getId());
-            inq.setMessage(inquiry.getMessage());
-            inq.setStatus(inquiry.getStatus());
-            inq.setResponse(inquiry.getResponse());
-            inq.setCreatedAt(inquiry.getCreatedAt().toString());
-            inq.setUpdatedAt(inquiry.getUpdatedAt().toString());
+        inq.setId(inquiry.getId());
+        inq.setMessage(inquiry.getMessage());
+        inq.setStatus(inquiry.getStatus());
+        inq.setResponse(inquiry.getResponse());
+        inq.setCreatedAt(inquiry.getCreatedAt().toString());
+        inq.setUpdatedAt(inquiry.getUpdatedAt().toString());
 
-            inq.setUserId(user.getId());
-            inq.setUsername(user.getUsername());
-            inq.setEmail(user.getEmail());
+        inq.setUserId(user.getId());
+        inq.setUsername(user.getUsername());
+        inq.setEmail(user.getEmail());
 
-        return new ApiResponse(200, "Cập nhật thành công và đã gửi email phản hồi.", inq);
+        return new ApiResponse("success", "Cập nhật thành công và đã gửi email phản hồi.", inq);
     }
 
     public ApiResponse deleteInquiry(String id) {
         Inquiry deleted = inquiryRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy thắc mắc."));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thắc mắc."));
 
         inquiryRepository.deleteById(id);
-        return new ApiResponse(200, "Xoá thắc mắc thành công", deleted);
+        return new ApiResponse("success", "Xoá thắc mắc thành công", deleted);
     }
 }

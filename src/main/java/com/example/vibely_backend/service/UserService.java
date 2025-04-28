@@ -27,7 +27,7 @@ public class UserService {
     AuthenticationManager authManager;
 
     @Autowired
-    private UserRepository userRepository;    
+    private UserRepository userRepository;
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
@@ -121,61 +121,32 @@ public class UserService {
     }
 
     public User updateUserProfile(
-        String userId,
-        UserProfileUpdateRequest request,
-        String profilePictureUrl,
-        String coverPictureUrl
-    ) {
-    User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            String userId,
+            UserProfileUpdateRequest request,
+            String profilePictureUrl,
+            String coverPictureUrl) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-    // Cập nhật thông tin từ request
-    if (request.getUsername() != null) user.setUsername(request.getUsername());
-    if (request.getEmail() != null) user.setEmail(request.getEmail());
-    if (request.getGender() != null) user.setGender(request.getGender());
+        // Cập nhật thông tin từ request
+        if (request.getUsername() != null)
+            user.setUsername(request.getUsername());
+        if (request.getEmail() != null)
+            user.setEmail(request.getEmail());
+        if (request.getGender() != null)
+            user.setGender(request.getGender());
 
-    // Nếu dateOfBirth là String thì cần parse:
-    if (request.getDateOfBirth() != null) {
-        user.setDateOfBirth(request.getDateOfBirth());
-    }
-
-    // Cập nhật ảnh nếu có
-    if (profilePictureUrl != null) user.setProfilePicture(profilePictureUrl);
-    if (coverPictureUrl != null) user.setCoverPicture(coverPictureUrl);
-
-    return userRepository.save(user);
-    }
-
-    public User save(User user) {
-        log.info("Lưu thông tin user: {}", user.getEmail());
-        try {
-            User savedUser = repo.save(user);
-            log.info("Lưu thông tin user thành công: {}", savedUser.getEmail());
-            return savedUser;
-        } catch (Exception e) {
-            log.error("Lỗi khi lưu thông tin user: {}", e.getMessage());
-            throw new RuntimeException("Lỗi khi lưu thông tin user: " + e.getMessage());
+        // Nếu dateOfBirth là String thì cần parse:
+        if (request.getDateOfBirth() != null) {
+            user.setDateOfBirth(request.getDateOfBirth());
         }
-    }
 
-    public void changePassword(String email, String oldPassword, String newPassword) {
-        log.info("Đổi mật khẩu cho user: {}", email);
-        try {
-            User user = repo.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+        // Cập nhật ảnh nếu có
+        if (profilePictureUrl != null)
+            user.setProfilePicture(profilePictureUrl);
+        if (coverPictureUrl != null)
+            user.setCoverPicture(coverPictureUrl);
 
-            // Kiểm tra mật khẩu cũ
-            if (!encoder.matches(oldPassword, user.getPassword())) {
-                throw new RuntimeException("Mật khẩu cũ không đúng");
-            }
-
-            // Cập nhật mật khẩu mới
-            user.setPassword(encoder.encode(newPassword));
-            repo.save(user);
-            log.info("Đổi mật khẩu thành công cho user: {}", email);
-        } catch (Exception e) {
-            log.error("Lỗi khi đổi mật khẩu: {}", e.getMessage());
-            throw new RuntimeException("Lỗi khi đổi mật khẩu: " + e.getMessage());
-        }
+        return userRepository.save(user);
     }
 }
