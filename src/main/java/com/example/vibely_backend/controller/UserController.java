@@ -68,8 +68,7 @@ public class UserController {
             @RequestHeader("Authorization") String authHeader,
             @ModelAttribute UserProfileUpdateRequest request,
             @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture,
-            @RequestPart(value = "coverPicture", required = false) MultipartFile coverPicture
-    ) {
+            @RequestPart(value = "coverPicture", required = false) MultipartFile coverPicture) {
         try {
             String token = authHeader.replace("Bearer ", "");
             String userId = jwtService.extractUserIdFromToken(token);
@@ -90,27 +89,29 @@ public class UserController {
             }
 
             // Cập nhật thông tin từ DTO
-            if (request.getUsername() != null) user.setUsername(request.getUsername());
-            if (request.getEmail() != null) user.setEmail(request.getEmail());
-            if (request.getGender() != null) user.setGender(request.getGender());
+            if (request.getUsername() != null)
+                user.setUsername(request.getUsername());
+            if (request.getEmail() != null)
+                user.setEmail(request.getEmail());
+            if (request.getGender() != null)
+                user.setGender(request.getGender());
             if (request.getDateOfBirth() != null) {
                 user.setDateOfBirth(request.getDateOfBirth());
             }
 
             userRepository.save(user);
 
-            return ResponseEntity.ok(new ApiResponse(200, "Cập nhật hồ sơ thành công", user));
+            return ResponseEntity.ok(new ApiResponse("success", "Cập nhật hồ sơ thành công", user));
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(400, "Lỗi khi cập nhật hồ sơ", e.getMessage()));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Lỗi khi cập nhật hồ sơ", e.getMessage()));
         }
     }
 
     @PutMapping("/bio")
     public ResponseEntity<?> updateUserBio(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody BioRequest bioRequest
-    ) {
+            @RequestBody BioRequest bioRequest) {
         try {
             String token = authHeader.replace("Bearer ", "");
             String userId = jwtService.extractUserIdFromToken(token);
@@ -139,9 +140,10 @@ public class UserController {
             user.setBio(savedBio);
             userRepository.save(user);
 
-            return ResponseEntity.ok(new ApiResponse(200, "Cập nhật tiểu sử thành công", savedBio));
+            return ResponseEntity.ok(new ApiResponse("success", "Cập nhật tiểu sử thành công", savedBio));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(400, "Lỗi khi cập nhật tiểu sử", e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Lỗi khi cập nhật tiểu sử", e.getMessage()));
         }
     }
 }

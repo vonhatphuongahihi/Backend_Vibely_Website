@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/conversations")
+@RequestMapping("/conversations")
 public class ConversationController {
 
     @Autowired
@@ -56,7 +56,6 @@ public class ConversationController {
                 return ResponseEntity.badRequest().body("Thiếu userId");
             }
 
-            
             Conversation conversation = conversationService.getConversationBetweenUsers(firstUserId, secondUserId);
             return ResponseEntity.ok(conversation);
         } catch (Exception e) {
