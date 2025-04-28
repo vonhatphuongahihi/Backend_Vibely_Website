@@ -5,6 +5,7 @@ import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.HashMap;
 
 import java.io.IOException;
 import java.util.Map;
@@ -36,4 +37,11 @@ public class CloudinaryService {
             throw new IOException("Error uploading file to Cloudinary", e);
         }
     }
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> uploadFile(MultipartFile file, String folder) throws IOException {
+        Map<String, Object> options = new HashMap<>();
+        options.put("folder", folder);
+        return (Map<String, Object>) cloudinary.uploader().upload(file.getBytes(), options);
+    }
+    
 } 

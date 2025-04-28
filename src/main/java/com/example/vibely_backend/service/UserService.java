@@ -1,6 +1,6 @@
 package com.example.vibely_backend.service;
 
-import com.example.vibely_backend.dto.request.RegisterRequest;
+import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.UserRepository;
 
@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
+
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -26,7 +27,7 @@ public class UserService {
     AuthenticationManager authManager;
 
     @Autowired
-    private UserRepository repo;
+    private UserRepository userRepository;    
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
@@ -43,11 +44,11 @@ public class UserService {
             throw new RuntimeException("Email là bắt buộc");
         }
 
-        if (repo.findByUsername(user.getUsername()).isPresent()) {
+        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             log.warn("Username đã tồn tại: {}", user.getUsername());
             throw new RuntimeException("Username đã tồn tại");
         }
-        if (repo.findByEmail(user.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             log.warn("Email đã tồn tại: {}", user.getEmail());
             throw new RuntimeException("Email đã tồn tại");
         }
@@ -67,7 +68,7 @@ public class UserService {
         user.setPassword(encoder.encode(user.getPassword()));
 
         try {
-            User savedUser = repo.save(user);
+            User savedUser = userRepository.save(user);
             log.info("Người dùng đã đăng ký tài khoản thành công: {}", savedUser.getUsername());
             return savedUser;
         } catch (Exception e) {
@@ -116,7 +117,33 @@ public class UserService {
 
     public Optional<User> findByEmail(String email) {
         log.debug("Tìm user với email: {}", email);
-        return repo.findByEmail(email);
+        return userRepository.findByEmail(email);
+    }
+
+    public User updateUserProfile(
+        String userId,
+        UserProfileUpdateRequest request,
+        String profilePictureUrl,
+        String coverPictureUrl
+    ) {
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    // Cập nhật thông tin từ request
+    if (request.getUsername() != null) user.setUsername(request.getUsername());
+    if (request.getEmail() != null) user.setEmail(request.getEmail());
+    if (request.getGender() != null) user.setGender(request.getGender());
+
+    // Nếu dateOfBirth là String thì cần parse:
+    if (request.getDateOfBirth() != null) {
+        user.setDateOfBirth(request.getDateOfBirth());
+    }
+
+    // Cập nhật ảnh nếu có
+    if (profilePictureUrl != null) user.setProfilePicture(profilePictureUrl);
+    if (coverPictureUrl != null) user.setCoverPicture(coverPictureUrl);
+
+    return userRepository.save(user);
     }
 
     public User save(User user) {

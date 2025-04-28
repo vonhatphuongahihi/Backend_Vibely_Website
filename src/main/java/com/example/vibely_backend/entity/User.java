@@ -1,7 +1,7 @@
 package com.example.vibely_backend.entity;
 
-import java.util.ArrayList;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.annotation.Id;
@@ -43,7 +43,7 @@ public class User {
     @DBRef
     private List<Post> savedPosts = new ArrayList<>();
     @DBRef
-    private List<Document> savedDocuments = new ArrayList<>();
+    private List<DocumentUser> savedDocuments = new ArrayList<>();
 
     private int postsCount = 0;
     private int followerCount = 0;
