@@ -13,13 +13,25 @@ public class RegisterRequest {
     private String password;
     private String gender;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    private LocalDateTime dateOfBirth;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    private String dateOfBirth;
 
     public LocalDate getDateOfBirthAsLocalDate() {
-        if (dateOfBirth != null) {
-            return dateOfBirth.toLocalDate();
+        if (dateOfBirth == null) {
+            return null;
         }
-        return null;
+
+        try {
+            // Thử parse theo định dạng ISO string (có timezone)
+            if (dateOfBirth.contains("T")) {
+                LocalDateTime dateTime = LocalDateTime.parse(dateOfBirth.substring(0, 19));
+                return dateTime.toLocalDate();
+            }
+            // Nếu không phải ISO string, parse theo định dạng yyyy-MM-dd
+            return LocalDate.parse(dateOfBirth);
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Định dạng ngày sinh không hợp lệ. Vui lòng sử dụng định dạng yyyy-MM-dd hoặc yyyy-MM-ddTHH:mm:ss.sssZ");
+        }
     }
 }
