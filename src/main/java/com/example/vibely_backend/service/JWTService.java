@@ -1,12 +1,16 @@
 package com.example.vibely_backend.service;
 
+import com.example.vibely_backend.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import com.example.vibely_backend.entity.User;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -34,7 +38,36 @@ public class JWTService {
                 .signWith(getKey())
                 .compact();
     }
-
+    public String generateToken(String userId, String username) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+    
+        return Jwts.builder()
+                .claims()
+                .add(claims)
+                .subject(username)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
+                .and()
+                .signWith(getKey())
+                .compact();
+    }    
+    @Autowired
+    UserRepository userRepository; // để tra userId từ username trong token
+    public String extractUserIdFromToken(String token) {
+        Claims claims = extractAllClaims(token);
+        String userId = claims.get("userId", String.class); // lấy trực tiếp từ claim
+    
+        if (userId != null) return userId;
+    
+        // fallback theo email/username
+        String subject = claims.getSubject();
+        User user = userRepository.findByEmail(subject)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    
+        return user.getId();
+    }
+    
     private SecretKey getKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);

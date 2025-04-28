@@ -31,6 +31,8 @@ import java.util.Optional;
 @RequestMapping("/admin/auth")
 @RequiredArgsConstructor
 @Slf4j
+@CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
+        "http://127.0.0.1:3000" }, allowCredentials = "true")
 public class AdminAuthController {
 
     private final AdminRepository adminRepository;
@@ -120,11 +122,11 @@ public class AdminAuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         try {
             response.setContentType("application/json;charset=UTF-8");
-            log.info("Đang đăng nhập admin: {}", request.getUsername());
+            log.info("Đang đăng nhập admin: {}", request.getEmail());
 
-            // Kiểm tra username và password
-            if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Username là bắt buộc");
+            // Kiểm tra email và password
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Email là bắt buộc");
             }
             if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Password là bắt buộc");
@@ -133,13 +135,13 @@ public class AdminAuthController {
             // Xác thực
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getUsername(),
+                            request.getEmail(),
                             request.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             // Tạo token
-            String token = jwtService.generateToken(request.getUsername());
+            String token = jwtService.generateToken(request.getEmail());
 
             // Tạo cookie
             Cookie cookie = new Cookie("token", token);
@@ -149,10 +151,12 @@ public class AdminAuthController {
             response.addCookie(cookie);
 
             // Lấy thông tin admin
-            Admin admin = adminRepository.findByUsername(request.getUsername())
+            Admin admin = adminRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("Admin không tồn tại"));
 
+            // Tạo response body đơn giản hơn
             Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("success", true);
             responseBody.put("message", "Đăng nhập thành công");
             responseBody.put("token", token);
             responseBody.put("admin", admin);
@@ -160,12 +164,16 @@ public class AdminAuthController {
             return ResponseEntity.ok(responseBody);
         } catch (BadCredentialsException e) {
             log.warn("Đăng nhập thất bại: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Username hoặc password không đúng");
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Email hoặc password không đúng");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         } catch (Exception e) {
             log.error("Lỗi khi đăng nhập: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Có lỗi xảy ra khi đăng nhập");
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Có lỗi xảy ra khi đăng nhập");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 

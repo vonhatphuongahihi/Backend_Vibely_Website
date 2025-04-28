@@ -34,9 +34,9 @@ public class ScheduleController {
             String userId = user.getId();
 
             Schedule schedule = scheduleService.createSchedule(userId, request);
-            return ResponseEntity.ok(new ApiResponse(200, "Tạo lịch thành công", schedule));
+            return ResponseEntity.ok(new ApiResponse("success", "Tạo lịch thành công", schedule));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -52,9 +52,9 @@ public class ScheduleController {
             String userId = user.getId();
 
             List<Schedule> schedules = scheduleService.getSchedulesByUserId(userId);
-            return ResponseEntity.ok(new ApiResponse(200, "Lấy danh sách lịch thành công", schedules));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy danh sách lịch thành công", schedules));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -70,9 +70,9 @@ public class ScheduleController {
             String userId = user.getId();
 
             Schedule schedule = scheduleService.updateSchedule(id, userId, request);
-            return ResponseEntity.ok(new ApiResponse(200, "Cập nhật lịch thành công", schedule));
+            return ResponseEntity.ok(new ApiResponse("success", "Cập nhật lịch thành công", schedule));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
@@ -88,9 +88,9 @@ public class ScheduleController {
             String userId = user.getId();
 
             scheduleService.deleteSchedule(id, userId);
-            return ResponseEntity.ok(new ApiResponse(200, "Xóa lịch thành công", null));
+            return ResponseEntity.ok(new ApiResponse("success", "Xóa lịch thành công", null));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(400, e.getMessage(), null));
+            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
 
