@@ -22,7 +22,6 @@ import com.example.vibely_backend.service.JWTService;
 
 import lombok.RequiredArgsConstructor;
 
-
 @RestController
 @RequestMapping("/documents")
 @RequiredArgsConstructor
@@ -35,15 +34,13 @@ public class DocumentController {
     @PostMapping("/levels")
     public ResponseEntity<ApiResponse> createLevel(@RequestBody Map<String, String> request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(
-            documentService.createLevel(request.get("name"))
-        );
+                documentService.createLevel(request.get("name")));
     }
 
     @PostMapping("/subjects")
     public ResponseEntity<ApiResponse> createSubject(@RequestBody Map<String, String> request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(
-            documentService.createSubject(request.get("name"), request.get("levelId"))
-        );
+                documentService.createSubject(request.get("name"), request.get("levelId")));
     }
 
     @GetMapping("/levels")
@@ -66,8 +63,7 @@ public class DocumentController {
     public ResponseEntity<ApiResponse> getFilteredDocuments(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String level,
-            @RequestParam(required = false) String subject
-    ) {
+            @RequestParam(required = false) String subject) {
         return ResponseEntity.ok(documentService.getFilteredDocuments(query, level, subject));
     }
 
@@ -91,13 +87,25 @@ public class DocumentController {
 
     // Lưu tài liệu
     @PostMapping("/save")
-    public ResponseEntity<ApiResponse> saveDocument(@RequestHeader("Authorization") String authHeader, @RequestBody Map<String, String> body) {
+    public ResponseEntity<ApiResponse> saveDocument(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> body) {
+
         String token = authHeader.replace("Bearer ", "");
         String userId = jwtService.extractUserIdFromToken(token);
         String documentId = body.get("documentId");
 
         ApiResponse response = documentService.saveDocument(userId, documentId);
-        return ResponseEntity.status(response.getStatus()).body(response);
+
+        // Xác định HTTP status dựa theo response status string
+        HttpStatus status = HttpStatus.OK;
+        if ("error".equalsIgnoreCase(response.getStatus())) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        } else if ("fail".equalsIgnoreCase(response.getStatus())) {
+            status = HttpStatus.BAD_REQUEST;
+        }
+
+        return ResponseEntity.status(status).body(response);
     }
 
 }

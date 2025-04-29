@@ -20,29 +20,29 @@ public class QuizService {
 
     public ApiResponse createQuiz(Quiz quiz) {
         if (quiz.getQuizTitle() == null || quiz.getQuizTitle().isEmpty() ||
-            quiz.getIcon() == null || quiz.getIcon().isEmpty() ||
-            quiz.getQuizQuestions() == null || quiz.getQuizQuestions().isEmpty()) {
-            return new ApiResponse(400, "Vui lòng cung cấp đầy đủ thông tin.", null);
+                quiz.getIcon() == null || quiz.getIcon().isEmpty() ||
+                quiz.getQuizQuestions() == null || quiz.getQuizQuestions().isEmpty()) {
+            return new ApiResponse("error", "Vui lòng cung cấp đầy đủ thông tin.", null);
         }
 
         quizRepository.save(quiz);
-        return new ApiResponse(201, "Quiz đã được tạo thành công!", quiz);
+        return new ApiResponse("success", "Quiz đã được tạo thành công!", quiz);
     }
 
     public ApiResponse getAllQuizzes() {
         List<Quiz> quizzes = quizRepository.findAll();
-        return new ApiResponse(200, "Lấy danh sách quiz thành công!", quizzes);
+        return new ApiResponse("success", "Lấy danh sách quiz thành công!", quizzes);
     }
 
     public ApiResponse getQuizById(String id) {
         return quizRepository.findById(id)
-            .map(quiz -> new ApiResponse(200, "Lấy quiz thành công!", quiz))
-            .orElse(new ApiResponse(404, "Quiz không tồn tại.", null));
+                .map(quiz -> new ApiResponse("success", "Lấy quiz thành công!", quiz))
+                .orElse(new ApiResponse("error", "Quiz không tồn tại.", null));
     }
 
     public ApiResponse updateQuiz(String id, QuizUpdateWrapper wrapper) {
         Quiz quiz = quizRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Quiz không tồn tại."));
+                .orElseThrow(() -> new RuntimeException("Quiz không tồn tại."));
 
         // Nếu có updateQuiz thì cập nhật toàn bộ quiz
         if (wrapper.getUpdateQuiz() != null) {
@@ -58,17 +58,16 @@ public class QuizService {
         }
 
         quizRepository.save(quiz);
-        return new ApiResponse(200, "Cập nhật quiz thành công!", quiz);
+        return new ApiResponse("success", "Cập nhật quiz thành công!", quiz);
     }
 
     public ApiResponse deleteQuiz(String id) {
         Optional<Quiz> quiz = quizRepository.findById(id);
         if (quiz.isEmpty()) {
-            return new ApiResponse(404, "Quiz không tồn tại.", null);
+            return new ApiResponse("error", "Quiz không tồn tại.", null);
         }
 
         quizRepository.deleteById(id);
-        return new ApiResponse(200, "Xóa quiz thành công!", quiz.get());
+        return new ApiResponse("success", "Xóa quiz thành công!", quiz.get());
     }
 }
-
