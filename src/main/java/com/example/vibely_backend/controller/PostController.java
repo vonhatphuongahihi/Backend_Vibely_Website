@@ -24,7 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/posts")
+@RequestMapping("/users")
 public class PostController {
 
     @Autowired
@@ -37,7 +37,7 @@ public class PostController {
     private CloudinaryService cloudinaryService;
 
     // Tạo bài viết
-    @PostMapping
+    @PostMapping("/posts")
     public ResponseEntity<?> createPost(@RequestParam(required = false) String content,
             @RequestParam(required = false) MultipartFile file) {
         System.out.println("createPostcreatePostcreatePostcreatePostcreatePostcreatePost: " + content);
@@ -148,7 +148,7 @@ public class PostController {
     }
 
     // Lấy tất cả bài viết
-    @GetMapping
+    @GetMapping("/posts")
     public ResponseEntity<?> getAllPosts() {
         try {
             List<Post> posts = postRepository.findAll();
@@ -160,7 +160,7 @@ public class PostController {
     }
 
     // Lấy tất cả story
-    @GetMapping("/stories")
+    @GetMapping("/story")
     public ResponseEntity<?> getAllStories() {
         try {
             List<Story> stories = storyRepository.findAll();
@@ -172,7 +172,7 @@ public class PostController {
     }
 
     // Lấy bài viết theo ID người dùng
-    @GetMapping("/user/{id}")
+    @GetMapping("posts/user/{id}")
     public ResponseEntity<?> getPostByUserId(@PathVariable String id) {
         try {
             if (id == null || id.isEmpty()) {
@@ -187,7 +187,7 @@ public class PostController {
     }
 
     // React bài viết
-    @PostMapping("/{postId}/react")
+    @PostMapping("posts/react/{postId}")
     public ResponseEntity<?> reactPost(@PathVariable String postId, @RequestBody Map<String, String> body) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -275,7 +275,7 @@ public class PostController {
     }
 
     // Thả tym story
-    @PostMapping("/stories/{storyId}/react")
+    @PostMapping("/story/react/{storyId}")
     public ResponseEntity<?> reactStory(@PathVariable String storyId) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -338,7 +338,7 @@ public class PostController {
     }
 
     // Bình luận bài viết
-    @PostMapping("/{postId}/comments")
+    @PostMapping("/posts/comments/{postId}")
     public ResponseEntity<?> addCommentToPost(@PathVariable String postId, @RequestBody Map<String, String> body) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -380,7 +380,7 @@ public class PostController {
     }
 
     // Phản hồi bình luận
-    @PostMapping("/{postId}/comments/reply")
+    @PostMapping("/posts/reply/{postId}")
     public ResponseEntity<?> addReplyToPost(@PathVariable String postId, @RequestBody Map<String, String> body) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -439,7 +439,7 @@ public class PostController {
     }
 
     // Chia sẻ bài viết
-    @PostMapping("/{postId}/share")
+    @PostMapping("/posts/share/{postId}")
     public ResponseEntity<?> sharePost(@PathVariable String postId) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -484,7 +484,7 @@ public class PostController {
     }
 
     // Xóa bài viết
-    @DeleteMapping("/{postId}/delete")
+    @DeleteMapping("/posts/delete/{postId}")
     public ResponseEntity<?> deletePost(@PathVariable String postId) {
         try {
             Optional<Post> postOpt = postRepository.findById(postId);
@@ -507,7 +507,7 @@ public class PostController {
     }
 
     // Xóa bình luận
-    @DeleteMapping("/{postId}/comments/{commentId}/delete")
+    @DeleteMapping("/posts/deleteComment/{postId}/{commentId}")
     public ResponseEntity<?> deleteComment(@PathVariable String postId, @PathVariable String commentId) {
         try {
             Optional<Post> postOpt = postRepository.findById(postId);
@@ -544,7 +544,7 @@ public class PostController {
     }
 
     // Xóa phản hồi
-    @DeleteMapping("/{postId}/comments/{commentId}/replies/{replyId}/delete")
+    @DeleteMapping("/posts/deleteReply/{postId}/{commentId}/{replyId}")
     public ResponseEntity<?> deleteReply(@PathVariable String postId, @PathVariable String commentId,
             @PathVariable String replyId) {
         try {
@@ -593,7 +593,7 @@ public class PostController {
     }
 
     // Lấy bài viết theo ID
-    @GetMapping("/{postId}")
+    @GetMapping("/posts/{postId}")
     public ResponseEntity<?> getSinglePost(@PathVariable String postId) {
         try {
             Optional<Post> postOpt = postRepository.findById(postId);
@@ -609,7 +609,7 @@ public class PostController {
     }
 
     // Thích bình luận
-    @PostMapping("/{postId}/comments/{commentId}/react")
+    @PostMapping("/posts/reactComment/{postId}/{commentId}")
     public ResponseEntity<?> reactComment(@PathVariable String postId, @PathVariable String commentId,
             @RequestBody Map<String, String> body) {
         try {
