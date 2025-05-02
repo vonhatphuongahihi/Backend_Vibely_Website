@@ -32,7 +32,6 @@ public class UserService {
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     public User register(User user) {
-        log.info("Đăng ký tài khoản: {}", user.getUsername());
 
         if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
             throw new RuntimeException("Tên tài khoản là bắt buộc");
@@ -53,7 +52,7 @@ public class UserService {
             throw new RuntimeException("Email đã tồn tại");
         }
 
-        // Initialize collections
+        // Thiết lập
         user.setFollowers(new ArrayList<>());
         user.setFollowings(new ArrayList<>());
         user.setPosts(new ArrayList<>());
@@ -69,7 +68,6 @@ public class UserService {
 
         try {
             User savedUser = userRepository.save(user);
-            log.info("Người dùng đã đăng ký tài khoản thành công: {}", savedUser.getUsername());
             return savedUser;
         } catch (Exception e) {
             log.error("Lỗi đăng ký tài khoản: {}", e.getMessage());
@@ -79,7 +77,6 @@ public class UserService {
 
     public String verify(User user) {
         String usernameOrEmail = user.getUsername() != null ? user.getUsername() : user.getEmail();
-        log.info("Đang xác minh tài khoản: {}", usernameOrEmail);
 
         if (usernameOrEmail == null || usernameOrEmail.trim().isEmpty()) {
             log.warn("Username hoặc email trống");
@@ -91,12 +88,10 @@ public class UserService {
         }
 
         try {
-            log.debug("Bắt đầu xác thực với AuthenticationManager");
             Authentication authentication = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(usernameOrEmail, user.getPassword()));
 
             if (authentication.isAuthenticated()) {
-                log.info("Xác thực thành công cho người dùng: {}", usernameOrEmail);
                 return jwtService.generateToken(usernameOrEmail);
             } else {
                 log.warn("Xác thực thất bại cho người dùng: {}", usernameOrEmail);
@@ -116,7 +111,6 @@ public class UserService {
     }
 
     public Optional<User> findByEmail(String email) {
-        log.debug("Tìm user với email: {}", email);
         return userRepository.findByEmail(email);
     }
 

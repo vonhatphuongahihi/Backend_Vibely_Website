@@ -25,15 +25,12 @@ public class MyAdminDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        log.info("Loading admin by email: {}", email);
 
         Admin admin = adminRepo.findByEmail(email)
                 .orElseThrow(() -> {
-                    log.warn("Admin not found with email: {}", email);
+                    log.warn("Không tìm thấy admin với email: {}", email);
                     return new UsernameNotFoundException("Không tìm thấy admin với email: " + email);
                 });
-
-        log.info("Admin found: {}", admin.getEmail());
         return new AdminPrincipal(admin);
     }
 }

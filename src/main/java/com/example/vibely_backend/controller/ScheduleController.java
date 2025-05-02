@@ -28,14 +28,27 @@ public class ScheduleController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
+            log.debug("Tạo lịch cho user với email: {}", email);
 
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             String userId = user.getId();
 
+            // Validate time
+            if (request.getStartTime() == null || request.getEndTime() == null) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error", "Thiếu thời gian bắt đầu hoặc kết thúc", null));
+            }
+
+            if (request.getEndTime().before(request.getStartTime())) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error", "Thời gian kết thúc phải sau thời gian bắt đầu", null));
+            }
+
             Schedule schedule = scheduleService.createSchedule(userId, request);
             return ResponseEntity.ok(new ApiResponse("success", "Tạo lịch thành công", schedule));
         } catch (Exception e) {
+            log.error("Lỗi khi tạo lịch: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
@@ -68,6 +81,14 @@ public class ScheduleController {
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             String userId = user.getId();
+
+            // Validate time
+            if (request.getStartTime() != null && request.getEndTime() != null) {
+                if (request.getEndTime().before(request.getStartTime())) {
+                    return ResponseEntity.badRequest()
+                            .body(new ApiResponse("error", "Thời gian kết thúc phải sau thời gian bắt đầu", null));
+                }
+            }
 
             Schedule schedule = scheduleService.updateSchedule(id, userId, request);
             return ResponseEntity.ok(new ApiResponse("success", "Cập nhật lịch thành công", schedule));

@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**", "/schedules/**",
-                                "/users/**")
+                                "/users/**", "/quotations/**", "/quizzes/**")
                         .permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated())
@@ -93,6 +93,7 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

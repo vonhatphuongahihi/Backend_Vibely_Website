@@ -31,7 +31,6 @@ public class AdminService {
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     public Admin register(Admin admin) {
-        log.info("Đăng ký tài khoản admin: {}", admin.getUsername());
 
         if (admin.getUsername() == null || admin.getUsername().trim().isEmpty()) {
             throw new RuntimeException("Tên tài khoản là bắt buộc");
@@ -57,7 +56,6 @@ public class AdminService {
 
         try {
             Admin savedAdmin = adminRepository.save(admin);
-            log.info("Admin đã đăng ký thành công: {}", savedAdmin.getUsername());
             return savedAdmin;
         } catch (Exception e) {
             log.error("Lỗi đăng ký admin: {}", e.getMessage());
@@ -67,7 +65,6 @@ public class AdminService {
 
     public String verify(Admin admin) {
         String usernameOrEmail = admin.getUsername() != null ? admin.getUsername() : admin.getEmail();
-        log.info("Xác minh đăng nhập admin: {}", usernameOrEmail);
 
         if (usernameOrEmail == null || usernameOrEmail.trim().isEmpty()) {
             throw new RuntimeException("Username hoặc email là bắt buộc");
@@ -89,7 +86,6 @@ public class AdminService {
                     new UsernamePasswordAuthenticationToken(usernameOrEmail, admin.getPassword()));
 
             if (authentication.isAuthenticated()) {
-                log.info("Admin xác thực thành công: {}", usernameOrEmail);
                 return jwtService.generateToken(usernameOrEmail);
             }
 

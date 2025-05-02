@@ -55,7 +55,6 @@ public class AdminDashboardController {
             dashboardData.put("documentsData", stats.get("documentsStats"));
             dashboardData.put("inquiriesData", stats.get("inquiriesStats"));
 
-            log.info("Dashboard data: {}", dashboardData);
             return ResponseEntity.ok(new ApiResponse("success", "Lấy dữ liệu dashboard thành công", dashboardData));
         } catch (Exception e) {
             log.error("Lỗi khi lấy dữ liệu dashboard: {}", e.getMessage());
@@ -83,7 +82,6 @@ public class AdminDashboardController {
                 stats.put("documentsStats", new ArrayList<>());
             }
 
-            log.info("Dashboard stats: {}", stats);
             return ResponseEntity.ok(new ApiResponse("success", "Lấy thống kê thành công", stats));
         } catch (Exception e) {
             log.error("Lỗi khi lấy thống kê: {}", e.getMessage());

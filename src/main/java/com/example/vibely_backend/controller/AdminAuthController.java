@@ -45,7 +45,6 @@ public class AdminAuthController {
     public ResponseEntity<?> register(@RequestBody RegisterAdminRequest request, HttpServletResponse response) {
         try {
             response.setContentType("application/json;charset=UTF-8");
-            log.info("Đang đăng ký admin mới: {}", request.getUsername());
 
             // Kiểm tra các trường bắt buộc
             if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
@@ -93,7 +92,6 @@ public class AdminAuthController {
 
             // Lưu admin vào database
             adminRepository.save(admin);
-            log.info("Admin đã được tạo thành công: {}", admin.getUsername());
 
             // Tạo token
             String token = jwtService.generateToken(admin.getUsername());
@@ -122,7 +120,6 @@ public class AdminAuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         try {
             response.setContentType("application/json;charset=UTF-8");
-            log.info("Đang đăng nhập admin: {}", request.getEmail());
 
             // Kiểm tra email và password
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
