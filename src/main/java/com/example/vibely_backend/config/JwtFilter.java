@@ -31,65 +31,58 @@ public class JwtFilter extends OncePerRequestFilter {
     @Qualifier("myUserDetailsService")
     private UserDetailsService userDetailsService;
 
-    @Autowired
-    @Qualifier("myAdminDetailsService")
-    private UserDetailsService adminDetailsService;
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+
         String token = null;
         String email = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
+
             try {
                 email = jwtService.extractEmail(token);
-                log.info("Extracted email from token: {}", email);
             } catch (Exception e) {
-                log.error("Error extracting email from token: {}", e.getMessage());
+                log.error("Lỗi xử lý token: {}", e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
         }
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            String path = request.getRequestURI();
-            UserDetails userDetails = null;
-
             try {
-                // Chọn đúng service dựa trên path
-                if (path.startsWith("/admin/")) {
-                    userDetails = adminDetailsService.loadUserByUsername(email);
-                } else {
-                    userDetails = userDetailsService.loadUserByUsername(email);
-                }
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
                 if (jwtService.validateToken(token, userDetails, email)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            email,
+                            userDetails,
                             null,
                             userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.info("Authenticated user with email: {}", email);
                 } else {
-                    log.warn("Token validation failed for email: {}", email);
+                    log.warn("Lỗi khi xác thực token: {}", email);
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
-
             } catch (Exception e) {
-                log.error("Error during authentication: {}", e.getMessage());
+                log.error("Lỗi khi xác thực: {}", e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path.startsWith("/auth/");
     }
 }
