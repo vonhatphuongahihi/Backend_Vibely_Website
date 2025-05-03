@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -26,19 +26,19 @@ public class Schedule {
     private String subject;
 
     @Field("startTime")
-    private Date startTime;
+    private LocalDateTime startTime;
 
     @Field("endTime")
-    private Date endTime;
+    private LocalDateTime endTime;
 
     @Field("categoryColor")
     private String categoryColor = "#0000FF";
 
     @CreatedDate
     @Field("createdAt")
-    private Date createdAt;
+    private LocalDateTime createdAt;
 
     @LastModifiedDate
     @Field("updatedAt")
-    private Date updatedAt;
+    private LocalDateTime updatedAt;
 }
