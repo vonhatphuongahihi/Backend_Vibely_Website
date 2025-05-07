@@ -13,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -31,32 +32,47 @@ public class JwtFilter extends OncePerRequestFilter {
     @Qualifier("myUserDetailsService")
     private UserDetailsService userDetailsService;
 
+    @Autowired
+    @Qualifier("myAdminDetailsService")
+    private UserDetailsService adminDetailsService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+        try {
+            String authHeader = request.getHeader("Authorization");
+            log.debug("Received Authorization header: {}", authHeader);
 
-        String token = null;
-        String email = null;
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-
-            try {
-                email = jwtService.extractEmail(token);
-            } catch (Exception e) {
-                log.error("Lỗi xử lý token: {}", e.getMessage());
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                log.debug("No valid Authorization header found");
+                filterChain.doFilter(request, response);
                 return;
             }
-        }
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            try {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            String token = authHeader.substring(7);
+            log.debug("Extracted token: {}", token);
+
+            String email = jwtService.extractEmail(token);
+            log.debug("Extracted email from token: {}", email);
+
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = null;
+                try {
+                    // Thử load user trước
+                    userDetails = userDetailsService.loadUserByUsername(email);
+                } catch (UsernameNotFoundException e) {
+                    try {
+                        // Nếu không tìm thấy user, thử load admin
+                        userDetails = adminDetailsService.loadUserByUsername(email);
+                    } catch (UsernameNotFoundException ex) {
+                        log.warn("Không tìm thấy user hoặc admin với email: {}", email);
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        return;
+                    }
+                }
 
                 if (jwtService.validateToken(token, userDetails, email)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -65,24 +81,24 @@ public class JwtFilter extends OncePerRequestFilter {
                             userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    log.debug("Authentication successful for: {}", email);
                 } else {
-                    log.warn("Lỗi khi xác thực token: {}", email);
+                    log.warn("Token validation failed for: {}", email);
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
-            } catch (Exception e) {
-                log.error("Lỗi khi xác thực: {}", e.getMessage());
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
             }
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+        } catch (Exception e) {
+            log.error("Error processing JWT token: {}", e.getMessage(), e);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        }
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/auth/");
+        return path.startsWith("/auth/") || path.startsWith("/admin/auth/");
     }
 }

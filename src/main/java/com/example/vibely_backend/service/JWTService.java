@@ -26,12 +26,12 @@ public class JWTService {
 
     private static final long JWT_EXPIRATION = 24 * 60 * 60 * 1000;
 
-    public String generateToken(String username) {
+    public String generateToken(String email) {
         Map<String, Object> claims = new HashMap<>();
         return Jwts.builder()
                 .claims()
                 .add(claims)
-                .subject(username)
+                .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
                 .and()
@@ -39,14 +39,14 @@ public class JWTService {
                 .compact();
     }
 
-    public String generateToken(String userId, String username) {
+    public String generateToken(String userId, String email) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
 
         return Jwts.builder()
                 .claims()
                 .add(claims)
-                .subject(username)
+                .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
                 .and()
@@ -55,18 +55,17 @@ public class JWTService {
     }
 
     @Autowired
-    UserRepository userRepository; // để tra userId từ username trong token
+    UserRepository userRepository;
 
     public String extractUserIdFromToken(String token) {
         Claims claims = extractAllClaims(token);
-        String userId = claims.get("userId", String.class); // lấy trực tiếp từ claim
+        String userId = claims.get("userId", String.class);
 
         if (userId != null)
             return userId;
 
-        // fallback theo email/username
-        String subject = claims.getSubject();
-        User user = userRepository.findByEmail(subject)
+        String email = claims.getSubject();
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return user.getId();
@@ -75,10 +74,6 @@ public class JWTService {
     private SecretKey getKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    public String extractUserName(String token) {
-        return extractClaim(token, Claims::getSubject);
     }
 
     public String extractEmail(String token) {
@@ -110,5 +105,4 @@ public class JWTService {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
-
 }
