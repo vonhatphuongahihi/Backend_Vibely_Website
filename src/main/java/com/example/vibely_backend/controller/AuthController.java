@@ -35,10 +35,8 @@ public class AuthController {
     private JWTService jwtService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest,
-            HttpServletResponse response) {
+    public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest) {
         try {
-            log.info("Nhận yêu cầu đăng ký từ người dùng: {}", registerRequest.getUsername());
 
             User user = new User();
             user.setUsername(registerRequest.getUsername());
@@ -48,16 +46,8 @@ public class AuthController {
             user.setDateOfBirth(registerRequest.getDateOfBirthAsLocalDate());
 
             User registeredUser = service.register(user);
-            log.info("Đăng ký người dùng thành công: {}", registeredUser.getUsername());
 
             String token = service.generateToken(registeredUser);
-            log.debug("Đã tạo token JWT cho người dùng: {}", registeredUser.getUsername());
-
-            Cookie cookie = new Cookie("auth_token", token);
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setPath("/");
-            response.addCookie(cookie);
 
             Map<String, Object> userData = new HashMap<>();
             userData.put("username", registeredUser.getUsername());
@@ -77,17 +67,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest loginRequest) {
         try {
-            log.debug("Bắt đầu xác thực với AuthenticationManager");
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
-            log.info("Xác thực thành công cho người dùng: {}", loginRequest.getEmail());
-
             String token = jwtService.generateToken(loginRequest.getEmail());
-            log.debug("Đã xác thực người dùng và tạo token: {}", token);
 
             User user = service.findByEmail(loginRequest.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy email đăng ký của người dùng"));
 
             Map<String, Object> data = new HashMap<>();
             data.put("userId", user.getId());
@@ -103,15 +89,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("auth_token", "");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
-
+    public ResponseEntity<ApiResponse> logout() {
         return ResponseEntity.ok(new ApiResponse("success", "Đăng xuất thành công", null));
     }
-
 }

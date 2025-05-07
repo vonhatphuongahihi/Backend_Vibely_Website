@@ -8,12 +8,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
+    private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     public Schedule createSchedule(String userId, ScheduleRequest request) {
         log.info("Creating new schedule for user: {}", userId);
@@ -25,8 +28,13 @@ public class ScheduleService {
         Schedule schedule = new Schedule();
         schedule.setUserId(userId);
         schedule.setSubject(request.getSubject());
-        schedule.setStartTime(request.getStartTime());
-        schedule.setEndTime(request.getEndTime());
+
+        // Chuyển đổi thời gian sang múi giờ Việt Nam
+        LocalDateTime startTime = request.getStartTime().atZone(VIETNAM_ZONE).toLocalDateTime();
+        LocalDateTime endTime = request.getEndTime().atZone(VIETNAM_ZONE).toLocalDateTime();
+
+        schedule.setStartTime(startTime);
+        schedule.setEndTime(endTime);
         schedule.setCategoryColor(request.getCategoryColor() != null ? request.getCategoryColor() : "#0000FF");
 
         return scheduleRepository.save(schedule);
@@ -40,20 +48,22 @@ public class ScheduleService {
     public Schedule updateSchedule(String id, String userId, ScheduleRequest request) {
         log.info("Updating schedule {} for user: {}", id, userId);
 
-        // Tìm lịch theo id
         Schedule schedule = scheduleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Lịch trình không tồn tại"));
 
-        // Kiểm tra quyền sở hữu
         if (!schedule.getUserId().equals(userId)) {
             log.warn("User {} không có quyền chỉnh sửa lịch {}", userId, id);
             throw new RuntimeException("Bạn không có quyền chỉnh sửa lịch này");
         }
 
-        // Cập nhật thông tin
         schedule.setSubject(request.getSubject());
-        schedule.setStartTime(request.getStartTime());
-        schedule.setEndTime(request.getEndTime());
+
+        // Chuyển đổi thời gian sang múi giờ Việt Nam
+        LocalDateTime startTime = request.getStartTime().atZone(VIETNAM_ZONE).toLocalDateTime();
+        LocalDateTime endTime = request.getEndTime().atZone(VIETNAM_ZONE).toLocalDateTime();
+
+        schedule.setStartTime(startTime);
+        schedule.setEndTime(endTime);
         schedule.setCategoryColor(request.getCategoryColor());
 
         return scheduleRepository.save(schedule);

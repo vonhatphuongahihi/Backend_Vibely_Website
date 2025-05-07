@@ -26,55 +26,54 @@ public class JWTService {
 
     private static final long JWT_EXPIRATION = 24 * 60 * 60 * 1000;
 
-    public String generateToken(String username) {
+    public String generateToken(String email) {
         Map<String, Object> claims = new HashMap<>();
         return Jwts.builder()
                 .claims()
                 .add(claims)
-                .subject(username)
+                .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
                 .and()
                 .signWith(getKey())
                 .compact();
     }
-    public String generateToken(String userId, String username) {
+
+    public String generateToken(String userId, String email) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
-    
+
         return Jwts.builder()
                 .claims()
                 .add(claims)
-                .subject(username)
+                .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
                 .and()
                 .signWith(getKey())
                 .compact();
-    }    
+    }
+
     @Autowired
-    UserRepository userRepository; // để tra userId từ username trong token
+    UserRepository userRepository;
+
     public String extractUserIdFromToken(String token) {
         Claims claims = extractAllClaims(token);
-        String userId = claims.get("userId", String.class); // lấy trực tiếp từ claim
-    
-        if (userId != null) return userId;
-    
-        // fallback theo email/username
-        String subject = claims.getSubject();
-        User user = userRepository.findByEmail(subject)
+        String userId = claims.get("userId", String.class);
+
+        if (userId != null)
+            return userId;
+
+        String email = claims.getSubject();
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-    
+
         return user.getId();
     }
-    
+
     private SecretKey getKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    public String extractUserName(String token) {
-        return extractClaim(token, Claims::getSubject);
     }
 
     public String extractEmail(String token) {
@@ -94,12 +93,9 @@ public class JWTService {
                 .getPayload();
     }
 
-    public boolean validateToken(String token, UserDetails userDetails, String username) {
-        // dang so sanh username va email chu khong phai username và username : loi
-        final String userName = extractUserName(token); // dang tra ve email
-        // userDetails.getUsername() dang tra ve username
-
-        return (userName.equals(username) && !isTokenExpired(token));
+    public boolean validateToken(String token, UserDetails userDetails, String email) {
+        final String tokenEmail = extractEmail(token);
+        return (tokenEmail.equals(email) && !isTokenExpired(token));
     }
 
     private boolean isTokenExpired(String token) {
@@ -109,5 +105,4 @@ public class JWTService {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
-
 }

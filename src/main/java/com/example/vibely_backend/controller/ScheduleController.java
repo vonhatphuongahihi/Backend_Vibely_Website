@@ -27,15 +27,30 @@ public class ScheduleController {
     public ResponseEntity<ApiResponse> createSchedule(@RequestBody ScheduleRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null) {
+                return ResponseEntity.badRequest().body(new ApiResponse("error", "User không xác thực", null));
+            }
             String email = authentication.getName();
 
             User user = userService.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("User không tồn tại"));
             String userId = user.getId();
+
+            // Validate time
+            if (request.getStartTime() == null || request.getEndTime() == null) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error", "Thiếu thời gian bắt đầu hoặc kết thúc", null));
+            }
+
+            if (request.getEndTime().isBefore(request.getStartTime())) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error", "Thời gian kết thúc phải sau thời gian bắt đầu", null));
+            }
 
             Schedule schedule = scheduleService.createSchedule(userId, request);
             return ResponseEntity.ok(new ApiResponse("success", "Tạo lịch thành công", schedule));
         } catch (Exception e) {
+            log.error("Lỗi khi tạo lịch: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
         }
     }
@@ -44,11 +59,13 @@ public class ScheduleController {
     public ResponseEntity<ApiResponse> getSchedules() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null) {
+                return ResponseEntity.badRequest().body(new ApiResponse("error", "User không xác thực", null));
+            }
             String email = authentication.getName();
-            log.debug("Tìm user với email: {}", email);
 
             User user = userService.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("User không tồn tại"));
             String userId = user.getId();
 
             List<Schedule> schedules = scheduleService.getSchedulesByUserId(userId);
@@ -62,12 +79,22 @@ public class ScheduleController {
     public ResponseEntity<ApiResponse> updateSchedule(@PathVariable String id, @RequestBody ScheduleRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null) {
+                return ResponseEntity.badRequest().body(new ApiResponse("error", "User không xác thực", null));
+            }
             String email = authentication.getName();
-            log.debug("Tìm user với email: {}", email);
 
             User user = userService.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("User không tồn tại"));
             String userId = user.getId();
+
+            // Validate time
+            if (request.getStartTime() != null && request.getEndTime() != null) {
+                if (request.getEndTime().isBefore(request.getStartTime())) {
+                    return ResponseEntity.badRequest()
+                            .body(new ApiResponse("error", "Thời gian kết thúc phải sau thời gian bắt đầu", null));
+                }
+            }
 
             Schedule schedule = scheduleService.updateSchedule(id, userId, request);
             return ResponseEntity.ok(new ApiResponse("success", "Cập nhật lịch thành công", schedule));
@@ -80,14 +107,16 @@ public class ScheduleController {
     public ResponseEntity<ApiResponse> deleteSchedule(@PathVariable String id) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null) {
+                return ResponseEntity.badRequest().body(new ApiResponse("error", "User không xác thực", null));
+            }
             String email = authentication.getName();
-            log.debug("Tìm user với email: {}", email);
 
             User user = userService.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("User không tồn tại"));
             String userId = user.getId();
 
-            scheduleService.deleteSchedule(id, userId);
+            scheduleService.deleteSchedule(userId, id);
             return ResponseEntity.ok(new ApiResponse("success", "Xóa lịch thành công", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
@@ -99,13 +128,21 @@ public class ScheduleController {
             @PathVariable String scheduleId,
             Authentication authentication) {
         try {
-            String userId = authentication.getName();
+            if (authentication == null) {
+                return ResponseEntity.badRequest().body("User không xác thực");
+            }
+
+            String email = authentication.getName();
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+            String userId = user.getId();
+
             Schedule schedule = scheduleService.getScheduleById(userId, scheduleId);
             return ResponseEntity.ok(schedule);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            log.error("Error getting schedule: {}", e.getMessage());
+            log.error("Lỗi không tìm thấy lịch: {}", e.getMessage());
             return ResponseEntity.internalServerError().body("Error");
         }
     }
