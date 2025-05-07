@@ -92,7 +92,13 @@ public class UserService {
                     new UsernamePasswordAuthenticationToken(usernameOrEmail, user.getPassword()));
 
             if (authentication.isAuthenticated()) {
-                return jwtService.generateToken(usernameOrEmail);
+                // Lấy user từ database để có đầy đủ thông tin
+                User authenticatedUser = userRepository.findByEmail(usernameOrEmail)
+                        .orElseGet(() -> userRepository.findByUsername(usernameOrEmail)
+                                .orElseThrow(() -> new RuntimeException("User not found")));
+
+                // Tạo token với userId và email
+                return jwtService.generateToken(authenticatedUser.getId(), authenticatedUser.getEmail());
             } else {
                 log.warn("Xác thực thất bại cho người dùng: {}", usernameOrEmail);
                 throw new RuntimeException("Xác thực thất bại");
@@ -107,7 +113,7 @@ public class UserService {
     }
 
     public String generateToken(User user) {
-        return jwtService.generateToken(user.getUsername());
+        return jwtService.generateToken(user.getEmail());
     }
 
     public Optional<User> findByEmail(String email) {

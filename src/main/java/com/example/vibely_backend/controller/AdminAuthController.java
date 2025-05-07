@@ -137,8 +137,12 @@ public class AdminAuthController {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // Tạo token
-            String token = jwtService.generateToken(request.getEmail());
+            // Lấy thông tin admin
+            Admin admin = adminRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new RuntimeException("Admin không tồn tại"));
+
+            // Tạo token với thông tin admin
+            String token = jwtService.generateToken(admin.getId(), request.getEmail());
 
             // Tạo cookie
             Cookie cookie = new Cookie("token", token);
@@ -147,11 +151,7 @@ public class AdminAuthController {
             cookie.setMaxAge(24 * 60 * 60);
             response.addCookie(cookie);
 
-            // Lấy thông tin admin
-            Admin admin = adminRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("Admin không tồn tại"));
-
-            // Tạo response body đơn giản hơn
+            // Tạo response body
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("success", true);
             responseBody.put("message", "Đăng nhập thành công");
