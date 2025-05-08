@@ -5,9 +5,9 @@ import com.example.vibely_backend.entity.Story;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.dto.response.PostDTO;
 import com.example.vibely_backend.service.PostService;
-
 import com.example.vibely_backend.repository.PostRepository;
 import com.example.vibely_backend.repository.StoryRepository;
+import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
 import com.example.vibely_backend.utils.ResponseHandler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,14 +45,16 @@ public class PostController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     // Tạo bài viết
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(@RequestParam(required = false) String content,
             @RequestParam(required = false) MultipartFile file) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            System.out.println("Authentication: " + authentication);
-            String userId = authentication.getName();
+            String userEmail = authentication.getName();
 
             String mediaUrl = null;
             String mediaType = null;
@@ -76,10 +78,12 @@ public class PostController {
                 return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Bài viết phải có nội dung hoặc đính kèm file");
             }
 
+            // Get the user by email
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
             // Tạo bài viết mới với các thông số ban đầu
             Post newPost = new Post();
-            User user = new User();
-            user.setId(userId);
             newPost.setUser(user);
             newPost.setContent(content);
             newPost.setMediaUrl(mediaUrl);

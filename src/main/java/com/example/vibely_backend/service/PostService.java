@@ -21,18 +21,9 @@ public class PostService {
     
     public List<PostDTO> getAllPosts() {
         List<Post> posts = postRepository.findAll();
-
         return posts.stream().map(post -> {
-            UserMiniDTO userDTO = null;
-            
             User postUser = post.getUser();
-            System.out.println( "postUser: " + postUser + " post: " + post);
-            if (postUser != null && postUser.getId() != null) {
-                userDTO = userRepository.findByEmail(postUser.getId())
-                        .map(UserMiniDTO::new)
-                        .orElse(null);
-            }
-
+            UserMiniDTO userDTO = postUser != null ? new UserMiniDTO(postUser) : null;
             return new PostDTO(post, userDTO);
         }).collect(Collectors.toList());
     }
@@ -40,11 +31,17 @@ public class PostService {
     public PostDTO getPostById(String postId) {
         return postRepository.findById(postId).map(post -> {
             UserMiniDTO userDTO = null;
-            if (post.getUser() != null && post.getUser().getId() != null) {
-                userDTO = userRepository.findById(post.getUser().getId())
-                        .map(UserMiniDTO::new)
+            User postUser = post.getUser();
+            
+            // If we have a user reference, try to get the full user object
+            if (postUser != null) {
+                User fullUser = userRepository.findByEmail(postUser.getEmail())
                         .orElse(null);
+                if (fullUser != null) {
+                    userDTO = new UserMiniDTO(fullUser);
+                }
             }
+
             return new PostDTO(post, userDTO);
         }).orElse(null);
     }

@@ -41,7 +41,7 @@ public class PostDTO {
         // Assign userDTO to the user field
         this.user = userDTO;
 
-        // You can add your reactions and comments mapping here if needed
+        // Map reactions if present
         if (post.getReactions() != null) {
             this.reactions = post.getReactions().stream().map(r -> new Reaction(
                     new UserMiniDTO(r.getUser()), // Assuming Reaction has a User reference
@@ -50,6 +50,7 @@ public class PostDTO {
             )).collect(Collectors.toList());
         }
 
+        // Map comments if present
         if (post.getComments() != null) {
             this.comments = post.getComments().stream().map(c -> new Comment(
                     c.getId(),
