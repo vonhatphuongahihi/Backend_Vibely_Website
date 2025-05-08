@@ -5,6 +5,7 @@ import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
 import com.example.vibely_backend.entity.Bio;
 import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.dto.response.UserDTO;
 import com.example.vibely_backend.repository.BioRepository;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -44,6 +46,20 @@ public class UserController {
 
     @Autowired
     private CloudinaryService cloudinaryService;
+    
+    @GetMapping()
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            List<User> users = userRepository.findAll();
+            List<UserDTO> userDTOs = users.stream().map(UserDTO::new).toList();
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy danh sách người dùng thành công", userDTOs));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Lỗi khi lấy danh sách người dùng", e.getMessage()));
+        }
+    }
+    
+
 
     @GetMapping("/check-auth")
     public ResponseEntity<?> checkAuth() {

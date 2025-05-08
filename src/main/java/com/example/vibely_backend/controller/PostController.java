@@ -3,6 +3,9 @@ package com.example.vibely_backend.controller;
 import com.example.vibely_backend.entity.Post;
 import com.example.vibely_backend.entity.Story;
 import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.dto.response.PostDTO;
+import com.example.vibely_backend.service.PostService;
+
 import com.example.vibely_backend.repository.PostRepository;
 import com.example.vibely_backend.repository.StoryRepository;
 import com.example.vibely_backend.service.CloudinaryService;
@@ -14,7 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -26,6 +30,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/users")
 public class PostController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PostController.class);
+
+    @Autowired
+    private PostService postService;
 
     @Autowired
     private PostRepository postRepository;
@@ -40,7 +49,6 @@ public class PostController {
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(@RequestParam(required = false) String content,
             @RequestParam(required = false) MultipartFile file) {
-        System.out.println("createPostcreatePostcreatePostcreatePostcreatePostcreatePost: " + content);
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             System.out.println("Authentication: " + authentication);
@@ -102,7 +110,7 @@ public class PostController {
 
     // Tạo story
     @PostMapping("/story")
-    public ResponseEntity<?> createStory(MultipartFile file) {
+    public ResponseEntity<?> createStory(@RequestParam("file") MultipartFile file) {
         System.out.println("createStorycreateStorycreateStorycreateStorycreateStorycreateStory: " + file);
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -148,14 +156,28 @@ public class PostController {
     }
 
     // Lấy tất cả bài viết
+    // @GetMapping("/posts")
+    // public ResponseEntity<?> getAllPosts() {
+    //     try {
+    //         List<Post> posts = postRepository.findAll();
+    //         // Sort posts by createdAt in descending order (newest first)
+    //         posts.sort((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()));
+    //         return ResponseHandler.response(HttpStatus.OK, "Lấy tất cả bài viết thành công", posts);
+    //     } catch (Exception e) {
+    //         return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Lấy tất cả bài viết thất bại",
+    //                 e.getMessage());
+    //     }
+    // }
+
+    
     @GetMapping("/posts")
     public ResponseEntity<?> getAllPosts() {
         try {
-            List<Post> posts = postRepository.findAll();
-            return ResponseHandler.response(HttpStatus.OK, "Lấy tất cả bài viết thành công", posts);
+            List<PostDTO> posts = postService.getAllPosts();
+            posts.sort((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()));
+            return ResponseHandler.response(HttpStatus.OK, "Lấy danh sách bài viết thành công", posts);
         } catch (Exception e) {
-            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Lấy tất cả bài viết thất bại",
-                    e.getMessage());
+            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi lấy bài viết", e.getMessage());
         }
     }
 
@@ -200,20 +222,18 @@ public class PostController {
             }
 
             Post post = postOpt.get();
-            System.out.println("====STEP 0=====: " + post.getReactionStats());
             if (post.getReactionStats() == null) {
                 post.setReactionStats(new Post.ReactionStats());
             }
-            System.out.println("====STEP 0.1=====: " + post.getReactionStats());
-
             // Tìm reaction của user nếu có
             int existingReactionIndex = findExistingReactionIndex(post, userId);
-            System.out.println("====STEP 0.2=====: " + existingReactionIndex);
 
             // This variable is used in the response message
             String action = processReaction(post, existingReactionIndex, type, userId);
-            System.out.println("====STEP 0.3=====: " + action);
             post.setUpdatedAt(new Date());
+
+            logger.info("Logging updated post: " + post);
+
             Post updatedPost = postRepository.save(post);
 
             Map<String, Object> responseData = Map.<String, Object>of(
@@ -247,6 +267,9 @@ public class PostController {
             newReaction.setUser(reactionUser);
             newReaction.setCreatedAt(new Date());
             newReaction.setType(type);
+
+            System.out.println("====STEP 0.2222222222=====: " + newReaction);
+
             if (post.getReactions() != null) {
                 post.getReactions().add(newReaction);
             } else {
@@ -260,10 +283,13 @@ public class PostController {
     }
 
     private int findExistingReactionIndex(Post post, String userId) {
+        logger.error("Logging post reactions and userId: " + post.getReactions() + " " + userId);
+
         int existingReactionIndex = -1;
-        System.out.println("====STEP 0.4=====: " + post.getReactions());
+        System.out.println("====STEP 0.41=====: " + post.getReactions());
         if (post.getReactions() != null) {
             for (int i = 0; i < post.getReactions().size(); i++) {
+                logger.info("Logging post reactions and userId: " + post.getReactions().get(i).getUser() + " " + userId);
                 if (post.getReactions().get(i).getUser().getId().equals(userId)) {
                     existingReactionIndex = i;
                     break;
