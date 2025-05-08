@@ -28,6 +28,9 @@ public class JWTService {
 
     public String generateToken(String email) {
         Map<String, Object> claims = new HashMap<>();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        claims.put("userId", user.getId());
         return Jwts.builder()
                 .claims()
                 .add(claims)

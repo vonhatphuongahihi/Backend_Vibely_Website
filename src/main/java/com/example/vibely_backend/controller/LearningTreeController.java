@@ -2,6 +2,7 @@ package com.example.vibely_backend.controller;
 
 import com.example.vibely_backend.entity.LearningTree;
 import com.example.vibely_backend.service.LearningTreeService;
+import com.example.vibely_backend.service.JWTService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,17 +14,19 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/learning-trees")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class LearningTreeController {
 
     @Autowired
     private LearningTreeService learningTreeService;
 
+    @Autowired
+    private JWTService jwtService;
+
     // Tạo cây
     @PostMapping("")
     public ResponseEntity<?> createTree(@RequestBody Map<String, String> request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String userId = auth.getName(); // Lấy userId từ token
+        String userId = jwtService.extractUserIdFromToken(auth.getCredentials().toString());
         String treeType = request.get("treeType");
 
         try {
@@ -38,7 +41,7 @@ public class LearningTreeController {
     @GetMapping("")
     public ResponseEntity<?> getTree() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String userId = auth.getName(); // Lấy userId từ token
+        String userId = jwtService.extractUserIdFromToken(auth.getCredentials().toString());
 
         Optional<LearningTree> treeOpt = learningTreeService.getTree(userId);
 
@@ -53,7 +56,7 @@ public class LearningTreeController {
     @PatchMapping("/type")
     public ResponseEntity<?> updateTreeType(@RequestBody Map<String, String> request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String userId = auth.getName(); // Lấy userId từ token
+        String userId = jwtService.extractUserIdFromToken(auth.getCredentials().toString());
         String newTreeType = request.get("treeType");
 
         try {
@@ -68,7 +71,7 @@ public class LearningTreeController {
     @GetMapping("/current")
     public ResponseEntity<?> getCurrentTree() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String userId = auth.getName(); // Lấy userId từ token
+        String userId = jwtService.extractUserIdFromToken(auth.getCredentials().toString());
 
         Optional<LearningTree> treeOpt = learningTreeService.getTree(userId);
 
