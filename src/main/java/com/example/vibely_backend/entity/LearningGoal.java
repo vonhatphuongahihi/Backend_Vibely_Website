@@ -26,8 +26,14 @@ public class LearningGoal {
     private User user;
 
     private String title;
+
+    @Field("isCompleted")
     private boolean isCompleted;
+
+    @Field("completed_at")
     private LocalDateTime completedAt;
+
+    @Field("isVisible")
     private boolean isVisible;
 
     @Field("created_at")
@@ -35,6 +41,22 @@ public class LearningGoal {
 
     @Field("updated_at")
     private LocalDateTime updatedAt;
+
+    public boolean isCompleted() {
+        return isCompleted;
+    }
+
+    public void setCompleted(boolean isCompleted) {
+        this.isCompleted = isCompleted;
+    }
+
+    public boolean isVisible() {
+        return isVisible;
+    }
+
+    public void setVisible(boolean isVisible) {
+        this.isVisible = isVisible;
+    }
 
     // Đảm bảo khi lưu mới, kiểm tra số lượng mục tiêu chưa hoàn thành của người
     // dùng
