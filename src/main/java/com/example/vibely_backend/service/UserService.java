@@ -1,20 +1,35 @@
 package com.example.vibely_backend.service;
 
-import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
-import com.example.vibely_backend.entity.User;
-import com.example.vibely_backend.repository.UserRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Optional;
+import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
+import com.example.vibely_backend.dto.response.ApiResponse;
+import com.example.vibely_backend.dto.response.BioResponse;
+import com.example.vibely_backend.dto.response.MutualFriendResponse;
+import com.example.vibely_backend.dto.response.SimpleUserResponse;
+import com.example.vibely_backend.dto.response.UserProfileResponse;
+import com.example.vibely_backend.entity.Bio;
+import com.example.vibely_backend.entity.DocumentUser;
+import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.repository.UserRepository;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -149,4 +164,326 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
+    private String getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return jwtService.extractUserIdFromToken(auth.getCredentials().toString());
+    }
+
+    public ApiResponse followUser(String userIdToFollow) {
+        String currentUserId = getCurrentUserId();
+        
+        if (currentUserId.equals(userIdToFollow)) {
+            return new ApiResponse("error", "Bạn không được phép theo dõi chính mình", null);
+        }
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElse(null);
+        if (currentUser == null) {
+            return new ApiResponse("error", "Người dùng hiện tại không tồn tại", null);
+        }
+
+        User userToFollow = userRepository.findById(userIdToFollow)
+                .orElse(null);
+        if (userToFollow == null) {
+            return new ApiResponse("error", "Người dùng cần theo dõi không tồn tại", null);
+        }
+
+        if (currentUser.getFollowings().contains(userToFollow)) {
+            return new ApiResponse("error", "Bạn đã theo dõi người dùng này", null);
+        }
+
+        currentUser.getFollowings().add(userToFollow);
+        userToFollow.getFollowers().add(currentUser);
+
+        currentUser.setFollowingCount(currentUser.getFollowings().size());
+        userToFollow.setFollowerCount(userToFollow.getFollowers().size());
+
+        userRepository.save(currentUser);
+        userRepository.save(userToFollow);
+
+        return new ApiResponse("success", "Theo dõi người dùng thành công", null);
+    }
+
+    public ApiResponse unfollowUser(String userIdToUnfollow) {
+        String currentUserId = getCurrentUserId();
+
+        if (currentUserId.equals(userIdToUnfollow)) {
+            return new ApiResponse("error", "Bạn không được phép bỏ theo dõi chính mình", null);
+        }
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElse(null);
+        if (currentUser == null) {
+            return new ApiResponse("error", "Người dùng hiện tại không tồn tại", null);
+        }
+
+        User userToUnfollow = userRepository.findById(userIdToUnfollow)
+                .orElse(null);
+        if (userToUnfollow == null) {
+            return new ApiResponse("error", "Người dùng cần bỏ theo dõi không tồn tại", null);
+        }
+
+        boolean isFollowing = currentUser.getFollowings().stream()
+            .anyMatch(user -> user.getId().equals(userIdToUnfollow));
+
+        if (!isFollowing) {
+            return new ApiResponse("error", "Bạn chưa theo dõi người dùng này", null);
+        }
+
+        currentUser.getFollowers().remove(userToUnfollow);
+        currentUser.getFollowings().remove(userToUnfollow);
+        userToUnfollow.getFollowers().remove(currentUser);
+        userToUnfollow.getFollowings().remove(currentUser);
+        
+
+        currentUser.setFollowerCount(currentUser.getFollowers().size());
+        currentUser.setFollowingCount(currentUser.getFollowings().size());
+        userToUnfollow.setFollowerCount(userToUnfollow.getFollowers().size());
+        userToUnfollow.setFollowingCount(userToUnfollow.getFollowings().size());
+
+        userRepository.save(currentUser);
+        userRepository.save(userToUnfollow);
+
+        return new ApiResponse("success", "Bỏ theo dõi người dùng thành công", null);
+    }
+
+    public ApiResponse deleteFriendRequest(String requestSenderId) {
+        String currentUserId = getCurrentUserId();
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElse(null);
+        if (currentUser == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        User sender = userRepository.findById(requestSenderId)
+                .orElse(null);
+        if (sender == null) {
+            return new ApiResponse("error", "Người gửi yêu cầu không tồn tại", null);
+        }
+
+        if (!sender.getFollowings().contains(currentUser)) {
+            return new ApiResponse("error", "Không tìm thấy yêu cầu kết bạn", null);
+        }
+
+        sender.getFollowings().remove(currentUser);
+        currentUser.getFollowers().remove(sender);
+
+        currentUser.setFollowerCount(currentUser.getFollowers().size());
+        sender.setFollowingCount(sender.getFollowings().size());
+
+        userRepository.save(currentUser);
+        userRepository.save(sender);
+
+        return new ApiResponse("success", "Đã xóa lời mời kết bạn từ " + sender.getUsername(), null);
+    }
+
+    public ApiResponse getAllFriendRequests() {
+        String currentUserId = getCurrentUserId();
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElse(null);
+        if (currentUser == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        List<SimpleUserResponse> requests = userRepository
+            .findAllById(currentUser.getFollowers().stream()
+                .filter(f -> !currentUser.getFollowings().contains(f))
+                .map(User::getId)
+                .toList())
+            .stream()
+            .map(user -> new SimpleUserResponse(user.getId(), user.getUsername(), user.getProfilePicture()))
+            .toList();
+
+        return new ApiResponse("success", "Lấy tất cả lời mời kết bạn thành công", requests);
+    }
+
+    public ApiResponse getAllUserForRequest() {
+        String currentUserId = getCurrentUserId();
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElse(null);
+        if (currentUser == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        Set<String> excludedIds = new HashSet<>();
+        excludedIds.add(currentUser.getId());
+
+        excludedIds.addAll(
+            currentUser.getFollowers().stream()
+                .map(User::getId)
+                .collect(Collectors.toSet())
+        );
+
+        excludedIds.addAll(
+            currentUser.getFollowings().stream()
+                .map(User::getId)
+                .collect(Collectors.toSet())
+        );
+
+        List<SimpleUserResponse> allUsers = userRepository.findAllSimpleUsers();
+
+        // Lọc ra những người chưa liên quan
+        List<SimpleUserResponse> suggestions = allUsers.stream()
+            .filter(user -> !excludedIds.contains(user.getId()))
+            .toList();
+
+        return new ApiResponse("success", "Lấy tất cả đề xuất kết bạn thành công", suggestions);
+    }
+
+    public ApiResponse getMutualFriends(String profileUserId) {
+        User profileUser = userRepository.findById(profileUserId)
+                .orElse(null);
+        if (profileUser == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        // Lấy danh sách ID mà profileUser đang follow
+        Set<String> followingIds = profileUser.getFollowings().stream()
+                .map(User::getId)
+                .collect(Collectors.toSet());
+
+        // Lọc follower nào cũng đang được follow lại (bạn chung)
+        List<MutualFriendResponse> mutualFriends = profileUser.getFollowers().stream()
+                .filter(follower -> followingIds.contains(follower.getId()))
+                .map(user -> new MutualFriendResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getProfilePicture(),
+                        user.getEmail(),
+                        user.getFollowers().size(),
+                        user.getFollowings().size()
+                ))
+                .toList();
+
+        return new ApiResponse("success", "Lấy danh sách bạn chung thành công", mutualFriends);
+    }
+
+    public ApiResponse getAllUsers() {
+        List<MutualFriendResponse> userInfos = userRepository.findAllUserFull();
+
+        return new ApiResponse("success", "Lấy tất cả người dùng thành công", userInfos);
+    }
+
+    public ApiResponse getUserProfile(String userId) {
+        String loggedInUserId = getCurrentUserId();
+        
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (optionalUser.isEmpty()) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        User user = optionalUser.get();
+        Bio bio = user.getBio();
+
+        BioResponse bioResponse = bio != null ? new BioResponse(
+            bio.getBioText(),
+            bio.getLiveIn(),
+            bio.getRelationship(),
+            bio.getWorkplace(),
+            bio.getEducation(),
+            bio.getPhone(),
+            bio.getHometown()
+        ) : null;
+
+        UserProfileResponse userProfile = new UserProfileResponse(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getGender(),
+            user.getDateOfBirth(),
+            user.getProfilePicture(),
+            user.getCoverPicture(),
+            bioResponse
+        );
+
+        boolean isOwner = userId.equals(loggedInUserId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("profile", userProfile);
+        result.put("isOwner", isOwner);
+
+        return new ApiResponse("success", "Lấy hồ sơ người dùng thành công", result);
+    }
+
+    public ApiResponse getUsersByIds(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return new ApiResponse("error", "Danh sách userId trống!", null);
+        }
+
+        List<User> users = userRepository.findAllById(userIds);
+
+        List<SimpleUserResponse> responseList = users.stream().map(user -> 
+            new SimpleUserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getProfilePicture()
+            )
+        ).toList();
+
+        return new ApiResponse("success", "Lấy danh sách người dùng thành công", responseList);
+    }
+
+    public ApiResponse getSavedDocuments(String query, String level, String subject) {
+        String userId = getCurrentUserId();
+    
+        User user = userRepository.findById(userId)
+            .orElse(null);
+        if (user == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        List<DocumentUser> filteredDocs = user.getSavedDocuments().stream()
+            .filter(doc -> 
+                (query == null || query.isBlank() || doc.getTitle().toLowerCase().contains(query.toLowerCase())) &&
+                (level == null || level.isBlank() || doc.getLevel().getId().equals(level)) &&
+                (subject == null || subject.isBlank() || doc.getSubject().getId().equals(subject))
+            )
+            .toList();
+
+        return new ApiResponse("success", "Lấy danh sách tài liệu đã lưu thành công", filteredDocs);
+    }
+
+    public ApiResponse getSavedDocumentById(String documentId) {
+        String userId = getCurrentUserId();
+
+        User user = userRepository.findById(userId)
+            .orElse(null);
+        if (user == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        Optional<DocumentUser> doc = user.getSavedDocuments().stream()
+                .filter(d -> d.getId().equals(documentId))
+                .findFirst();
+
+        if (doc.isEmpty()) {
+            return new ApiResponse("error", "Tài liệu không tồn tại trong danh sách đã lưu", null);
+        }
+
+        return new ApiResponse("success", "Lấy thông tin tài liệu đã lưu thành công", doc.get());
+    }
+
+    public ApiResponse unsaveDocument(String documentId) {
+        String userId = getCurrentUserId();
+        
+        User user = userRepository.findById(userId)
+                .orElse(null);
+        if (user == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        boolean removed = user.getSavedDocuments().removeIf(doc -> doc.getId().equals(documentId));
+
+        if (!removed) {
+            return new ApiResponse("error", "Tài liệu không tồn tại trong danh sách đã lưu", null);
+        }
+
+        userRepository.save(user);
+        return new ApiResponse("success", "Bỏ lưu tài liệu thành công", null);
+    }
+
 }

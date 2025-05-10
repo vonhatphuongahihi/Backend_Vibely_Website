@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.vibely_backend.dto.request.QuizRequest;
-import com.example.vibely_backend.dto.request.QuizUpdateWrapper;
 import com.example.vibely_backend.dto.response.ApiResponse;
+import com.example.vibely_backend.entity.Question;
 import com.example.vibely_backend.entity.Quiz;
 import com.example.vibely_backend.repository.QuizRepository;
 
@@ -39,26 +39,29 @@ public class QuizService {
                 .map(quiz -> new ApiResponse("success", "Lấy quiz thành công!", quiz))
                 .orElse(new ApiResponse("error", "Quiz không tồn tại.", null));
     }
-
-    public ApiResponse updateQuiz(String id, QuizUpdateWrapper wrapper) {
+    
+    // Hàm cho admin: cập nhật toàn bộ thông tin quiz
+    public ApiResponse updateQuizByAdmin(String id, QuizRequest request) {
         Quiz quiz = quizRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Quiz không tồn tại."));
+            .orElseThrow(() -> new RuntimeException("Quiz không tồn tại."));
 
-        // Nếu có updateQuiz thì cập nhật toàn bộ quiz
-        if (wrapper.getUpdateQuiz() != null) {
-            QuizRequest updateQuiz = wrapper.getUpdateQuiz();
-            quiz.setIcon(updateQuiz.getIcon());
-            quiz.setQuizTitle(updateQuiz.getQuizTitle());
-            quiz.setQuizQuestions(updateQuiz.getQuizQuestions());
-        }
-
-        // Nếu chỉ muốn update quizQuestions
-        if (wrapper.getUpdateQuizQuestions() != null && !wrapper.getUpdateQuizQuestions().isEmpty()) {
-            quiz.setQuizQuestions(wrapper.getUpdateQuizQuestions());
-        }
+        quiz.setQuizTitle(request.getQuizTitle());
+        quiz.setIcon(request.getIcon());
+        quiz.setQuizQuestions(request.getQuizQuestions());
 
         quizRepository.save(quiz);
         return new ApiResponse("success", "Cập nhật quiz thành công!", quiz);
+    }
+
+    // Hàm cho user: chỉ cập nhật danh sách câu hỏi
+    public ApiResponse updateQuizQuestionsByUser(String id, List<Question> questions) {
+        Quiz quiz = quizRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Quiz không tồn tại."));
+
+        quiz.setQuizQuestions(questions);
+        quizRepository.save(quiz);
+
+        return new ApiResponse("success", "Cập nhật câu hỏi thành công!", quiz);
     }
 
     public ApiResponse deleteQuiz(String id) {
