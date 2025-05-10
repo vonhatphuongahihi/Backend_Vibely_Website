@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,6 +18,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+
 @Document(collection = "users")
 public class User {
 
@@ -50,6 +52,7 @@ public class User {
     private int followingCount = 0;
 
     @DBRef
+    @JsonIgnore
     private Bio bio;
 
     private String verificationCode;

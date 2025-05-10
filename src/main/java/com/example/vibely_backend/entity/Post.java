@@ -19,7 +19,7 @@ public class Post {
     @Id
     private String id;
 
-    @DBRef
+    @DBRef(lazy = true)
     private User user;
 
     private String content;
@@ -46,7 +46,7 @@ public class Post {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Reaction {
-        @DBRef
+        @DBRef(lazy = true)
         private User user;
 
         private String type;
@@ -59,7 +59,7 @@ public class Post {
     @AllArgsConstructor
     public static class Comment {
         private String id;
-        @DBRef
+        @DBRef(lazy = true)
         private User user;
 
         private String text;
@@ -76,7 +76,7 @@ public class Post {
     @AllArgsConstructor
     public static class Reply {
         private String id;
-        @DBRef
+        @DBRef(lazy = true)
         private User user;
 
         private String text;
