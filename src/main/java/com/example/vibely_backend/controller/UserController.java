@@ -1,5 +1,30 @@
 package com.example.vibely_backend.controller;
 
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.example.vibely_backend.dto.request.BioRequest;
 import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
@@ -11,6 +36,7 @@ import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
 import com.example.vibely_backend.service.JWTService;
 import com.example.vibely_backend.service.UserService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -161,5 +187,73 @@ public class UserController {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse("error", "Lỗi khi cập nhật tiểu sử", e.getMessage()));
         }
+    }
+
+    @PostMapping("/follow")
+    public ResponseEntity<ApiResponse> followUser(@RequestBody Map<String, String> requestBody) {
+        String userIdToFollow = requestBody.get("userIdToFollow");
+        return ResponseEntity.ok(userService.followUser(userIdToFollow));
+    }
+
+    @PostMapping("/unfollow")
+    public ResponseEntity<ApiResponse> unfollowUser(@RequestBody Map<String, String> requestBody) {
+        String userIdToUnfollow = requestBody.get("userIdToUnfollow");
+        return ResponseEntity.ok(userService.unfollowUser(userIdToUnfollow));
+    }
+
+    @PostMapping("/friend-request/remove")
+    public ResponseEntity<ApiResponse> deleteFriendRequest(@RequestBody Map<String, String> requestBody) {
+        String requestSenderId = requestBody.get("requestSenderId");
+        return ResponseEntity.ok(userService.deleteFriendRequest(requestSenderId));
+    }
+
+    @GetMapping("/friend-request")
+    public ResponseEntity<ApiResponse> getAllFriendRequests() {
+        return ResponseEntity.ok(userService.getAllFriendRequests());
+    }
+
+    @GetMapping("/user-to-request")
+    public ResponseEntity<ApiResponse> getAllUserForRequest() {
+        return ResponseEntity.ok(userService.getAllUserForRequest());
+    }
+
+    @GetMapping("/mutual-friends/{userId}")
+    public ResponseEntity<ApiResponse> getMutualFriends(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getMutualFriends(userId));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    @GetMapping("/profile/{userId}")
+    public ResponseEntity<ApiResponse> getUserProfile(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getUserProfile(userId));
+    }
+
+    @PostMapping("/get-users")
+    public ResponseEntity<ApiResponse> getUsersByIds(@RequestBody Map<String, List<String>> body) {
+        List<String> userIds = body.get("userIds");
+        return ResponseEntity.ok(userService.getUsersByIds(userIds));
+    }
+
+    @GetMapping("/saved")
+    public ResponseEntity<ApiResponse> getSavedDocuments(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String subject
+    ) {
+        return ResponseEntity.ok(userService.getSavedDocuments(query, level, subject));
+    }
+
+    @GetMapping("/saved/{id}")
+    public ResponseEntity<ApiResponse> getSavedDocumentById(@PathVariable String id) {
+        return ResponseEntity.ok(userService.getSavedDocumentById(id));
+    }
+
+    @DeleteMapping("/saved/{id}")
+    public ResponseEntity<ApiResponse> unsaveDocument(@PathVariable String id) {
+        return ResponseEntity.ok(userService.unsaveDocument(id));
     }
 }

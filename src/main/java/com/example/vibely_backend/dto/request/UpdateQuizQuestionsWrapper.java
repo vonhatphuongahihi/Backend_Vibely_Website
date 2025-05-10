@@ -7,7 +7,6 @@ import com.example.vibely_backend.entity.Question;
 import lombok.Data;
 
 @Data
-public class QuizUpdateWrapper {
-    private QuizRequest updateQuiz;
+public class UpdateQuizQuestionsWrapper {
     private List<Question> updateQuizQuestions;
 }
