@@ -3,6 +3,7 @@ package com.example.vibely_backend.entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.annotation.CreatedDate;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,6 +27,8 @@ public class LearningTree {
     private int growthStage;
     private int completedGoalsCount;
 
+    @CreatedDate
+    private LocalDateTime createdAt;
     private LocalDateTime lastUpdated;
 
     // Tạo các hằng số cho tree type
