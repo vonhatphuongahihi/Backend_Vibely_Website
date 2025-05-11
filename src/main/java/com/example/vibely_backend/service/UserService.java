@@ -23,18 +23,15 @@ import com.example.vibely_backend.dto.response.ApiResponse;
 import com.example.vibely_backend.dto.response.BioResponse;
 import com.example.vibely_backend.dto.response.MutualFriendResponse;
 import com.example.vibely_backend.dto.response.SimpleUserResponse;
+import com.example.vibely_backend.dto.response.UserInfoResponse;
 import com.example.vibely_backend.dto.response.UserProfileResponse;
 import com.example.vibely_backend.entity.Bio;
 import com.example.vibely_backend.entity.DocumentUser;
+import com.example.vibely_backend.entity.Post;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 
 @Slf4j
 @Service
@@ -168,6 +165,44 @@ public class UserService {
             user.setCoverPicture(coverPictureUrl);
 
         return userRepository.save(user);
+    }
+
+    public UserInfoResponse convertToUserInfoResponse(User user) {
+        UserInfoResponse userResponse = new UserInfoResponse();
+        userResponse.setId(user.getId());
+        userResponse.setUsername(user.getUsername());
+        userResponse.setEmail(user.getEmail());
+        userResponse.setGender(user.getGender());
+        userResponse.setDateOfBirth(user.getDateOfBirth());
+        userResponse.setProfilePicture(user.getProfilePicture());
+        userResponse.setCoverPicture(user.getCoverPicture());
+
+        userResponse.setFollowers(user.getFollowers().stream().map(User::getId).collect(Collectors.toList()));
+        userResponse.setFollowings(user.getFollowings().stream().map(User::getId).collect(Collectors.toList()));
+        userResponse.setPosts(user.getPosts().stream().map(Post::getId).collect(Collectors.toList()));
+        userResponse.setLikedPosts(user.getLikedPosts().stream().map(Post::getId).collect(Collectors.toList()));
+        userResponse.setSavedPosts(user.getSavedPosts().stream().map(Post::getId).collect(Collectors.toList()));
+        userResponse.setSavedDocuments(user.getSavedDocuments().stream().map(DocumentUser::getId).collect(Collectors.toList()));
+
+        userResponse.setPostsCount(user.getPostsCount());
+        userResponse.setFollowerCount(user.getFollowerCount());
+        userResponse.setFollowingCount(user.getFollowingCount());
+
+        Bio bio = user.getBio();
+        if (bio != null) {
+            BioResponse bioResponse = new BioResponse(
+                    bio.getBioText(),
+                    bio.getLiveIn(),
+                    bio.getRelationship(),
+                    bio.getWorkplace(),
+                    bio.getEducation(),
+                    bio.getPhone(),
+                    bio.getHometown()
+            );
+            userResponse.setBio(bioResponse);
+        }
+
+        return userResponse;
     }
 
     private String getCurrentUserId() {
