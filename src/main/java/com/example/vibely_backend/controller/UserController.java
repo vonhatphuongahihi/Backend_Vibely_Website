@@ -72,20 +72,6 @@ public class UserController {
 
     @Autowired
     private CloudinaryService cloudinaryService;
-    
-    @GetMapping()
-    public ResponseEntity<?> getAllUsers() {
-        try {
-            List<User> users = userRepository.findAll();
-            List<UserDTO> userDTOs = users.stream().map(UserDTO::new).toList();
-            return ResponseEntity.ok(new ApiResponse("success", "Lấy danh sách người dùng thành công", userDTOs));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse("error", "Lỗi khi lấy danh sách người dùng", e.getMessage()));
-        }
-    }
-    
-
 
     @GetMapping("/check-auth")
     public ResponseEntity<?> checkAuth() {
@@ -242,8 +228,7 @@ public class UserController {
     public ResponseEntity<ApiResponse> getSavedDocuments(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String level,
-            @RequestParam(required = false) String subject
-    ) {
+            @RequestParam(required = false) String subject) {
         return ResponseEntity.ok(userService.getSavedDocuments(query, level, subject));
     }
 

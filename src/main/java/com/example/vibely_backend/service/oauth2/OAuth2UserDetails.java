@@ -2,15 +2,14 @@ package com.example.vibely_backend.service.oauth2;
 
 import java.util.Map;
 
-public abstract class OAuth2UserDetails {   
-    protected Map<String, Object> attributes;
+public interface OAuth2UserDetails {
+    String getId();
 
-    public OAuth2UserDetails(Map<String, Object> attributes) {
-        this.attributes = attributes;
-    }
+    String getName();
 
-    public abstract String getName();
+    String getEmail();
 
-    public abstract String getEmail();
+    String getImageUrl();
 
+    Map<String, Object> getAttributes();
 }
