@@ -58,7 +58,7 @@ public class UserController {
     private JWTService jwtService;
 
     @Autowired
-    private CloudinaryService cloudinaryService;  
+    private CloudinaryService cloudinaryService;
 
     @GetMapping("/check-auth")
     public ResponseEntity<?> checkAuth() {
@@ -218,8 +218,7 @@ public class UserController {
     public ResponseEntity<ApiResponse> getSavedDocuments(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String level,
-            @RequestParam(required = false) String subject
-    ) {
+            @RequestParam(required = false) String subject) {
         return ResponseEntity.ok(userService.getSavedDocuments(query, level, subject));
     }
 

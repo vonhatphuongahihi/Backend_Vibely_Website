@@ -17,6 +17,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import com.example.vibely_backend.service.JWTService;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
+import com.example.vibely_backend.service.oauth2.OAuth2GoogleUser;
+import com.example.vibely_backend.service.oauth2.OAuth2FacebookUser;
+import com.example.vibely_backend.service.oauth2.OAuth2GithubUser;
+import com.example.vibely_backend.entity.Provider;
+import org.springframework.web.servlet.view.RedirectView;
+import java.io.IOException;
 
 @Slf4j
 @RestController
@@ -91,5 +100,149 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse> logout() {
         return ResponseEntity.ok(new ApiResponse("success", "Đăng xuất thành công", null));
+    }
+
+    @GetMapping("/google")
+    public RedirectView googleLogin() {
+        return new RedirectView("/oauth2/authorize/google");
+    }
+
+    @GetMapping("/facebook")
+    public RedirectView facebookLogin() {
+        return new RedirectView("/oauth2/authorize/facebook");
+    }
+
+    @GetMapping("/github")
+    public RedirectView githubLogin() {
+        return new RedirectView("/oauth2/authorize/github");
+    }
+
+    @GetMapping("/google/callback")
+    public ResponseEntity<?> googleCallback(OAuth2AuthenticationToken authentication) {
+        try {
+            if (authentication == null) {
+                throw new RuntimeException("Không thể xác thực OAuth2");
+            }
+            OAuth2User oauth2User = authentication.getPrincipal();
+            OAuth2UserDetails oauth2UserDetails = new OAuth2GoogleUser(oauth2User.getAttributes());
+
+            User user = service.processOAuth2User(oauth2UserDetails, Provider.GOOGLE);
+            String token = jwtService.generateToken(user.getId(), user.getEmail());
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", user.getId());
+            data.put("email", user.getEmail());
+            data.put("username", user.getUsername());
+            data.put("token", token);
+
+            return ResponseEntity.ok(new ApiResponse("success", "Đăng nhập Google thành công", data));
+        } catch (Exception e) {
+            log.error("Lỗi đăng nhập Google: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Đăng nhập Google thất bại", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/facebook/callback")
+    public ResponseEntity<?> facebookCallback(OAuth2AuthenticationToken authentication) {
+        try {
+            if (authentication == null) {
+                throw new RuntimeException("Không thể xác thực OAuth2");
+            }
+            OAuth2User oauth2User = authentication.getPrincipal();
+            OAuth2UserDetails oauth2UserDetails = new OAuth2FacebookUser(oauth2User.getAttributes());
+
+            User user = service.processOAuth2User(oauth2UserDetails, Provider.FACEBOOK);
+            String token = jwtService.generateToken(user.getId(), user.getEmail());
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", user.getId());
+            data.put("email", user.getEmail());
+            data.put("username", user.getUsername());
+            data.put("token", token);
+
+            return ResponseEntity.ok(new ApiResponse("success", "Đăng nhập Facebook thành công", data));
+        } catch (Exception e) {
+            log.error("Lỗi đăng nhập Facebook: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Đăng nhập Facebook thất bại", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/github/callback")
+    public ResponseEntity<?> githubCallback(OAuth2AuthenticationToken authentication) {
+        try {
+            if (authentication == null) {
+                throw new RuntimeException("Không thể xác thực OAuth2");
+            }
+            OAuth2User oauth2User = authentication.getPrincipal();
+            OAuth2UserDetails oauth2UserDetails = new OAuth2GithubUser(oauth2User.getAttributes());
+
+            User user = service.processOAuth2User(oauth2UserDetails, Provider.GITHUB);
+            String token = jwtService.generateToken(user.getId(), user.getEmail());
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", user.getId());
+            data.put("email", user.getEmail());
+            data.put("username", user.getUsername());
+            data.put("token", token);
+
+            return ResponseEntity.ok(new ApiResponse("success", "Đăng nhập GitHub thành công", data));
+        } catch (Exception e) {
+            log.error("Lỗi đăng nhập Github: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Đăng nhập GitHub thất bại", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/login-success")
+    public void loginSuccess(OAuth2AuthenticationToken authentication, HttpServletResponse response)
+            throws IOException {
+        try {
+            if (authentication == null) {
+                throw new RuntimeException("Không thể xác thực OAuth2");
+            }
+            OAuth2User oauth2User = authentication.getPrincipal();
+            String provider = authentication.getAuthorizedClientRegistrationId();
+            OAuth2UserDetails oauth2UserDetails;
+
+            switch (provider.toUpperCase()) {
+                case "GOOGLE":
+                    oauth2UserDetails = new OAuth2GoogleUser(oauth2User.getAttributes());
+                    break;
+                case "FACEBOOK":
+                    oauth2UserDetails = new OAuth2FacebookUser(oauth2User.getAttributes());
+                    break;
+                case "GITHUB":
+                    oauth2UserDetails = new OAuth2GithubUser(oauth2User.getAttributes());
+                    break;
+                default:
+                    throw new RuntimeException("Provider không được hỗ trợ: " + provider);
+            }
+
+            User user = service.processOAuth2User(oauth2UserDetails, Provider.valueOf(provider.toUpperCase()));
+            String token = jwtService.generateToken(user.getId(), user.getEmail());
+
+            // Mã hóa các tham số để xử lý các ký tự đặc biệt
+            String encodedToken = java.net.URLEncoder.encode(token, "UTF-8");
+            String encodedUsername = java.net.URLEncoder.encode(user.getUsername(), "UTF-8");
+            String encodedEmail = java.net.URLEncoder.encode(user.getEmail(), "UTF-8");
+
+            // Chuyển hướng đến frontend kèm theo token và thông tin người dùng
+            String redirectUrl = String.format("http://localhost:3000?token=%s&userId=%s&email=%s&username=%s",
+                    encodedToken,
+                    user.getId(),
+                    encodedEmail,
+                    encodedUsername);
+
+            response.setStatus(HttpServletResponse.SC_FOUND);
+            response.setHeader("Location", redirectUrl);
+            response.sendRedirect(redirectUrl);
+        } catch (Exception e) {
+            log.error("OAuth2 login error: {}", e.getMessage());
+            String errorUrl = "http://localhost:3000/user-login?error=" +
+                    java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
+            response.sendRedirect(errorUrl);
+        }
     }
 }
