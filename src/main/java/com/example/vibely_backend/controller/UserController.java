@@ -28,27 +28,14 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.vibely_backend.dto.request.BioRequest;
 import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
+import com.example.vibely_backend.dto.response.UserInfoResponse;
 import com.example.vibely_backend.entity.Bio;
 import com.example.vibely_backend.entity.User;
-import com.example.vibely_backend.dto.response.UserDTO;
 import com.example.vibely_backend.repository.BioRepository;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
 import com.example.vibely_backend.service.JWTService;
 import com.example.vibely_backend.service.UserService;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Date;
-import java.util.Map;
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -81,7 +68,10 @@ public class UserController {
                     && !"anonymousUser".equals(authentication.getPrincipal())) {
                 String email = authentication.getName();
                 return userService.findByEmail(email)
-                        .map(user -> ResponseEntity.ok(new ApiResponse("success", "User is authenticated", user)))
+                        .map(user -> {
+                            UserInfoResponse userResponse = userService.convertToUserInfoResponse(user);
+                            return ResponseEntity.ok(new ApiResponse("success", "User is authenticated", userResponse));
+                        })
                         .orElse(ResponseEntity.ok(new ApiResponse("error", "User not found", null)));
             }
             return ResponseEntity.ok(new ApiResponse("error", "User is not authenticated", null));
