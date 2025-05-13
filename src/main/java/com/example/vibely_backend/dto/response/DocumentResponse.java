@@ -23,4 +23,5 @@ public class DocumentResponse {
     private String subjectName;
 
     private LocalDateTime uploadDate;
+    private LocalDateTime updatedAt;
 }

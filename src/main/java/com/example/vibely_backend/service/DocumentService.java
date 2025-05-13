@@ -125,7 +125,8 @@ public class DocumentService {
                 doc.getLevel().getName(),
                 doc.getSubject().getId(),
                 doc.getSubject().getName(),
-                doc.getUploadDate());
+                doc.getUploadDate(),
+                doc.getUpdatedAt());
 
         return new ApiResponse("success", "Tạo tài liệu thành công", response);
     }
@@ -180,7 +181,8 @@ public class DocumentService {
                 doc.getLevel().getName(),
                 doc.getSubject().getId(),
                 doc.getSubject().getName(),
-                doc.getUploadDate());
+                doc.getUploadDate(),
+                doc.getUpdatedAt());
 
         return new ApiResponse("success", "Lấy tài liệu theo ID thành công", response);
     }
@@ -217,7 +219,8 @@ public class DocumentService {
                 doc.getLevel().getName(),
                 doc.getSubject().getId(),
                 doc.getSubject().getName(),
-                doc.getUploadDate());
+                doc.getUploadDate(),
+                doc.getUpdatedAt());
 
         return new ApiResponse("success", "Cập nhật tài liệu thành công", response);
     }
