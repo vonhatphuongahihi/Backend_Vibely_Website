@@ -22,6 +22,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import com.example.vibely_backend.service.CustomOAuth2UserService;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -38,22 +43,38 @@ public class SecurityConfig {
     @Autowired
     private JwtFilter jwtFilter;
 
+    @Autowired
+    private CustomOAuth2UserService customOAuth2UserService;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**", "/schedules/**",
-                                "/users/**", "/quotations/**", "/quizzes/**", "/learning-trees/**",
+                        .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**",
+                                "/oauth2/**", "/login/**", "/schedules/**", "/users/**",
+                                "/quotations/**", "/quizzes/**", "/learning-trees/**",
                                 "/learning-goals/**", "/chatbot/**")
                         .permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .maximumSessions(1))
                 .authenticationProvider(userAuthenticationProvider())
                 .authenticationProvider(adminAuthenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/auth/login")
+                        .defaultSuccessUrl("/auth/login-success", true)
+                        .failureUrl("/auth/login-failure")
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorize"))
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/auth/*/callback"))
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)))
                 .build();
     }
 
