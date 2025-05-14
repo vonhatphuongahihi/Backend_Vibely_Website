@@ -54,15 +54,23 @@ public class User {
 
     @DBRef
     @JsonIgnore
-    private Bio bio;
+    private Bio bio = null;
 
     private String verificationCode;
     private LocalDate verificationCodeExpires;
 
+    private String name;
+    private String imageUrl;
+    private boolean enabled = true;
+    private Provider provider = Provider.LOCAL;
+    private String role = "ROLE_USER";
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         User user = (User) o;
         return Objects.equals(id, user.id);
     }

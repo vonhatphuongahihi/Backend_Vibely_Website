@@ -3,9 +3,9 @@ package com.example.vibely_backend.controller;
 import com.example.vibely_backend.dto.request.BioRequest;
 import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
+import com.example.vibely_backend.dto.response.UserInfoResponse;
 import com.example.vibely_backend.entity.Bio;
 import com.example.vibely_backend.entity.User;
-import com.example.vibely_backend.dto.response.UserDTO;
 import com.example.vibely_backend.repository.BioRepository;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
@@ -45,8 +45,7 @@ public class UserController {
     private JWTService jwtService;
 
     @Autowired
-    private CloudinaryService cloudinaryService;
-    
+    private CloudinaryService cloudinaryService;    
 
 
     @GetMapping("/check-auth")
@@ -57,7 +56,10 @@ public class UserController {
                     && !"anonymousUser".equals(authentication.getPrincipal())) {
                 String email = authentication.getName();
                 return userService.findByEmail(email)
-                        .map(user -> ResponseEntity.ok(new ApiResponse("success", "User is authenticated", user)))
+                        .map(user -> {
+                            UserInfoResponse userResponse = userService.convertToUserInfoResponse(user);
+                            return ResponseEntity.ok(new ApiResponse("success", "User is authenticated", userResponse));
+                        })
                         .orElse(ResponseEntity.ok(new ApiResponse("error", "User not found", null)));
             }
             return ResponseEntity.ok(new ApiResponse("error", "User is not authenticated", null));
@@ -149,5 +151,72 @@ public class UserController {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse("error", "Lỗi khi cập nhật tiểu sử", e.getMessage()));
         }
+    }
+
+    @PostMapping("/follow")
+    public ResponseEntity<ApiResponse> followUser(@RequestBody Map<String, String> requestBody) {
+        String userIdToFollow = requestBody.get("userIdToFollow");
+        return ResponseEntity.ok(userService.followUser(userIdToFollow));
+    }
+
+    @PostMapping("/unfollow")
+    public ResponseEntity<ApiResponse> unfollowUser(@RequestBody Map<String, String> requestBody) {
+        String userIdToUnfollow = requestBody.get("userIdToUnfollow");
+        return ResponseEntity.ok(userService.unfollowUser(userIdToUnfollow));
+    }
+
+    @PostMapping("/friend-request/remove")
+    public ResponseEntity<ApiResponse> deleteFriendRequest(@RequestBody Map<String, String> requestBody) {
+        String requestSenderId = requestBody.get("requestSenderId");
+        return ResponseEntity.ok(userService.deleteFriendRequest(requestSenderId));
+    }
+
+    @GetMapping("/friend-request")
+    public ResponseEntity<ApiResponse> getAllFriendRequests() {
+        return ResponseEntity.ok(userService.getAllFriendRequests());
+    }
+
+    @GetMapping("/user-to-request")
+    public ResponseEntity<ApiResponse> getAllUserForRequest() {
+        return ResponseEntity.ok(userService.getAllUserForRequest());
+    }
+
+    @GetMapping("/mutual-friends/{userId}")
+    public ResponseEntity<ApiResponse> getMutualFriends(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getMutualFriends(userId));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    @GetMapping("/profile/{userId}")
+    public ResponseEntity<ApiResponse> getUserProfile(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getUserProfile(userId));
+    }
+
+    @PostMapping("/get-users")
+    public ResponseEntity<ApiResponse> getUsersByIds(@RequestBody Map<String, List<String>> body) {
+        List<String> userIds = body.get("userIds");
+        return ResponseEntity.ok(userService.getUsersByIds(userIds));
+    }
+
+    @GetMapping("/saved")
+    public ResponseEntity<ApiResponse> getSavedDocuments(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String subject) {
+        return ResponseEntity.ok(userService.getSavedDocuments(query, level, subject));
+    }
+
+    @GetMapping("/saved/{id}")
+    public ResponseEntity<ApiResponse> getSavedDocumentById(@PathVariable String id) {
+        return ResponseEntity.ok(userService.getSavedDocumentById(id));
+    }
+
+    @DeleteMapping("/saved/{id}")
+    public ResponseEntity<ApiResponse> unsaveDocument(@PathVariable String id) {
+        return ResponseEntity.ok(userService.unsaveDocument(id));
     }
 }
