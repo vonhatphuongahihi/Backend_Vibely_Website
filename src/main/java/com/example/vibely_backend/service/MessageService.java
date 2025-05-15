@@ -20,4 +20,12 @@ public class MessageService {
     public List<Message> findByConversationId(String conversationId) {
         return messageRepository.findByConversationId(conversationId);
     }
+
+    public void markMessageAsRead(String messageId, String userId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin nhắn"));
+        message.setRead(true);
+        message.setUpdatedAt(new java.util.Date());
+        messageRepository.save(message);
+    }
 } 

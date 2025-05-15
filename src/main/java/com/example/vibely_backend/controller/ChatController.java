@@ -25,6 +25,8 @@ public class ChatController {
     public void addUser(@Payload Map<String, Object> payload, SimpMessageHeaderAccessor headerAccessor) {
         String userId = (String) payload.get("userId");
         headerAccessor.getSessionAttributes().put("userId", userId);
+        chatService.addOnlineUser(userId);
+        chatService.broadcastOnlineUsers();
     }
 
     @MessageMapping("/chat.markAsRead")
