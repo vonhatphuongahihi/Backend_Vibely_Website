@@ -214,7 +214,6 @@ public class UserService {
                     bio.getRelationship(),
                     bio.getWorkplace(),
                     bio.getEducation(),
-                    bio.getPhone(),
                     bio.getHometown());
             userResponse.setBio(bioResponse);
         }
@@ -438,7 +437,7 @@ public class UserService {
                 bio.getRelationship(),
                 bio.getWorkplace(),
                 bio.getEducation(),
-                bio.getPhone(),
+                // bio.getPhone(),
                 bio.getHometown()) : null;
 
         UserProfileResponse userProfile = new UserProfileResponse(
