@@ -31,7 +31,7 @@ public interface UserRepository extends MongoRepository<User, String> {
     @Query("SELECT new com.example.vibely_backend.dto.response.UserProfileResponse(" +
         "u.id, u.username, u.email, u.gender, u.dateOfBirth, u.profilePicture, u.coverPicture, " +
         "new com.example.vibely_backend.dto.response.UserProfileResponse$Bio(" +
-        "b.bioText, b.liveIn, b.relationship, b.workplace, b.education, b.phone, b.hometown)) " +
+        "b.bioText, b.liveIn, b.relationship, b.workplace, b.education, b.hometown)) " +
         "FROM User u LEFT JOIN Bio b ON u.id = b.user.id WHERE u.id = :userId")
     Optional<UserProfileResponse> findUserProfileById(@Param("userId") String userId);
 }

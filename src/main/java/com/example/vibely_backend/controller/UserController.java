@@ -10,19 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.vibely_backend.dto.request.BioRequest;
@@ -37,28 +25,31 @@ import com.example.vibely_backend.service.CloudinaryService;
 import com.example.vibely_backend.service.JWTService;
 import com.example.vibely_backend.service.UserService;
 
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+
 @RestController
 @RequestMapping("/users")
-@CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
-        "http://127.0.0.1:3000" })
+@CrossOrigin(origins = {
+        "http://localhost:3001", "http://localhost:3000",
+        "http://127.0.0.1:3001", "http://127.0.0.1:3000"
+})
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Autowired
-    private UserService userService;
+    @Autowired private MongoTemplate mongoTemplate;
+    @Autowired private UserService userService;
+    @Autowired private UserRepository userRepository;
+    @Autowired private BioRepository bioRepository;
+    @Autowired private JWTService jwtService;
+    @Autowired private CloudinaryService cloudinaryService;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private BioRepository bioRepository;
-
-    @Autowired
-    private JWTService jwtService;
-
-    @Autowired
-    private CloudinaryService cloudinaryService;
+    private String getUserIdFromAuthHeader(String authHeader) {
+        return jwtService.extractUserIdFromToken(authHeader.replace("Bearer ", ""));
+    }
 
     @GetMapping("/check-auth")
     public ResponseEntity<?> checkAuth() {
@@ -88,40 +79,46 @@ public class UserController {
             @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture,
             @RequestPart(value = "coverPicture", required = false) MultipartFile coverPicture) {
         try {
-            String token = authHeader.replace("Bearer ", "");
-            String userId = jwtService.extractUserIdFromToken(token);
+            String userId = getUserIdFromAuthHeader(authHeader);
 
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-            // Upload avatar nếu có
+            Bio currentBio = user.getBio();
+
             if (profilePicture != null && !profilePicture.isEmpty()) {
+                if (!profilePicture.getContentType().startsWith("image/")) {
+                    return ResponseEntity.badRequest().body(new ApiResponse("error", "Ảnh đại diện không hợp lệ", null));
+                }
                 Map<String, Object> avatarUpload = cloudinaryService.uploadFile(profilePicture, "user-avatars");
                 user.setProfilePicture((String) avatarUpload.get("secure_url"));
-            }
+            } 
 
-            // Upload cover nếu có
             if (coverPicture != null && !coverPicture.isEmpty()) {
+                if (!coverPicture.getContentType().startsWith("image/")) {
+                    return ResponseEntity.badRequest().body(new ApiResponse("error", "Ảnh bìa không hợp lệ", null));
+                }
                 Map<String, Object> coverUpload = cloudinaryService.uploadFile(coverPicture, "user-covers");
                 user.setCoverPicture((String) coverUpload.get("secure_url"));
             }
 
-            // Cập nhật thông tin từ DTO
             if (request.getUsername() != null)
                 user.setUsername(request.getUsername());
             if (request.getEmail() != null)
                 user.setEmail(request.getEmail());
             if (request.getGender() != null)
                 user.setGender(request.getGender());
-            if (request.getDateOfBirth() != null) {
+            if (request.getDateOfBirth() != null)
                 user.setDateOfBirth(request.getDateOfBirth());
-            }
+
+            user.setBio(currentBio);
 
             userRepository.save(user);
 
             return ResponseEntity.ok(new ApiResponse("success", "Cập nhật hồ sơ thành công", user));
 
         } catch (Exception e) {
+            logger.error("Lỗi khi cập nhật hồ sơ", e);
             return ResponseEntity.badRequest().body(new ApiResponse("error", "Lỗi khi cập nhật hồ sơ", e.getMessage()));
         }
     }
@@ -131,8 +128,7 @@ public class UserController {
             @RequestHeader("Authorization") String authHeader,
             @RequestBody BioRequest bioRequest) {
         try {
-            String token = authHeader.replace("Bearer ", "");
-            String userId = jwtService.extractUserIdFromToken(token);
+            String userId = getUserIdFromAuthHeader(authHeader);
 
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
@@ -144,24 +140,31 @@ public class UserController {
                 return newBio;
             });
 
-            bio.setBioText(bioRequest.getBioText());
-            bio.setLiveIn(bioRequest.getLiveIn());
-            bio.setRelationship(bioRequest.getRelationship());
-            bio.setWorkplace(bioRequest.getWorkplace());
-            bio.setEducation(bioRequest.getEducation());
-            bio.setPhone(bioRequest.getPhone());
-            bio.setHometown(bioRequest.getHometown());
+            if (bioRequest.getBioText() != null && !bioRequest.getBioText().isBlank())
+                bio.setBioText(bioRequest.getBioText());
+            if (bioRequest.getLiveIn() != null && !bioRequest.getLiveIn().isBlank())
+                bio.setLiveIn(bioRequest.getLiveIn());
+            if (bioRequest.getRelationship() != null && !bioRequest.getRelationship().isBlank())
+                bio.setRelationship(bioRequest.getRelationship());
+            if (bioRequest.getWorkplace() != null && !bioRequest.getWorkplace().isBlank())
+                bio.setWorkplace(bioRequest.getWorkplace());
+            if (bioRequest.getEducation() != null && !bioRequest.getEducation().isBlank())
+                bio.setEducation(bioRequest.getEducation());
+            if (bioRequest.getHometown() != null && !bioRequest.getHometown().isBlank())
+                bio.setHometown(bioRequest.getHometown());
+
             bio.setUpdatedAt(new Date());
 
             Bio savedBio = bioRepository.save(bio);
 
-            user.setBio(savedBio);
-            userRepository.save(user);
+            Query query = new Query(Criteria.where("_id").is(userId));
+            Update update = new Update().set("bio", savedBio);
+            mongoTemplate.updateFirst(query, update, User.class);
 
             return ResponseEntity.ok(new ApiResponse("success", "Cập nhật tiểu sử thành công", savedBio));
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse("error", "Lỗi khi cập nhật tiểu sử", e.getMessage()));
+            logger.error("Lỗi khi cập nhật tiểu sử", e);
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Lỗi khi cập nhật tiểu sử", e.getMessage()));
         }
     }
 
@@ -189,7 +192,7 @@ public class UserController {
     }
 
     @GetMapping("/user-to-request")
-    public ResponseEntity<ApiResponse> getAllUserForRequest() {
+    public ResponseEntity<ApiResponse> getAllUsersForFriendRequest() {
         return ResponseEntity.ok(userService.getAllUserForRequest());
     }
 
@@ -203,9 +206,18 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @GetMapping("/profile/{userId}")
-    public ResponseEntity<ApiResponse> getUserProfile(@PathVariable String userId) {
-        return ResponseEntity.ok(userService.getUserProfile(userId));
+    @GetMapping("/profile")
+    public ResponseEntity<?> getCurrentUserProfile(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = getUserIdFromAuthHeader(authHeader);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+            UserInfoResponse userResponse = userService.convertToUserInfoResponse(user);
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy thông tin hồ sơ thành công", userResponse));
+        } catch (Exception e) {
+            logger.error("Lỗi khi lấy thông tin hồ sơ", e);
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Lỗi khi lấy thông tin hồ sơ", e.getMessage()));
+        }
     }
 
     @PostMapping("/get-users")
