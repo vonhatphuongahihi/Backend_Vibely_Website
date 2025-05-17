@@ -9,6 +9,5 @@ public class BioRequest {
     private String relationship;
     private String workplace;
     private String education;
-    private String phone;
     private String hometown;
 }
