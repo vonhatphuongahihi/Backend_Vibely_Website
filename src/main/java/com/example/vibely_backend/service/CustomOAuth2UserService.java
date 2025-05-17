@@ -55,7 +55,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
                 @Override
                 public String getName() {
-                    return oauth2UserDetails.getEmail();
+                    String name = oauth2UserDetails.getId();
+                    if (name == null || name.isEmpty()) {
+                        name = oauth2UserDetails.getEmail(); // fallback
+                    }
+                    return name;
                 }
             };
         } catch (Exception e) {
