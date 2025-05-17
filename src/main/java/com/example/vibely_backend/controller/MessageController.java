@@ -34,4 +34,16 @@ public class MessageController {
             return ResponseEntity.internalServerError().body(e.getMessage());
         }
     }
+
+    @PostMapping("/read")
+    public ResponseEntity<?> markMessageAsRead(@RequestBody java.util.Map<String, String> request) {
+        String messageId = request.get("messageId");
+        String userId = request.get("userId");
+        try {
+            messageService.markMessageAsRead(messageId, userId);
+            return ResponseEntity.ok("Đã đánh dấu đã đọc");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
 }

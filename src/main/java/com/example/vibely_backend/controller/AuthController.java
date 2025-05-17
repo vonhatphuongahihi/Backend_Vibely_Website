@@ -28,6 +28,10 @@ import org.springframework.web.servlet.view.RedirectView;
 import java.io.IOException;
 import java.time.LocalDateTime;
 
+import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+
 @Slf4j
 @RestController
 @RequestMapping("/auth")
@@ -43,6 +47,47 @@ public class AuthController {
 
     @Autowired
     private JWTService jwtService;
+
+@PostMapping("/send-otp")
+public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
+    String email = request.get("email");
+
+    // Kiểm tra email
+    if (email == null || email.isEmpty()) {
+        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+    }
+
+    try {
+        // Gửi OTP đến email
+        service.sendOtpToEmail(email);  // gọi từ UserService
+        return ResponseEntity.ok(new ApiResponse("success", "Mã xác thực đã được gửi đến email", null));
+    } catch (Exception e) {
+        return ResponseEntity.internalServerError()
+                .body(new ApiResponse("error", "Gửi mã xác thực thất bại", e.getMessage()));
+    }
+}
+@PostMapping("/verify-otp")
+public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> request) {
+    String email = request.get("email");
+    String otp = request.get("otp");
+
+    // Kiểm tra email
+    if (email == null || email.isEmpty()) {
+        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+    }
+
+    try {
+        // Xác thực OTP
+        if (service.verifyOtp(email, otp)) {
+            return ResponseEntity.ok(new ApiResponse("success", "Xác thực OTP thành công", null));
+        } else {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "OTP không hợp lệ hoặc đã hết hạn", null));
+        }
+    } catch (Exception e) {
+        return ResponseEntity.internalServerError()
+                .body(new ApiResponse("error", "Xác thực OTP thất bại", e.getMessage()));
+    }
+}
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest) {
