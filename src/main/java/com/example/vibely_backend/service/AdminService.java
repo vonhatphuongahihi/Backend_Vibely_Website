@@ -100,9 +100,9 @@ public class AdminService {
         return jwtService.generateToken(admin.getUsername());
     }
 
-    public void updatePassword(String email, String oldPassword, String newPassword) {
-        Admin admin = adminRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy admin: " + email));
+    public void updatePassword(String username, String oldPassword, String newPassword) {
+        Admin admin = adminRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy admin: " + username));
 
         if (!passwordEncoder.matches(oldPassword, admin.getPassword())) {
             throw new RuntimeException("Mật khẩu cũ không đúng");

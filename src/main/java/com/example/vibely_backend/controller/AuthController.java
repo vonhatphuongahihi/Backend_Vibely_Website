@@ -26,6 +26,11 @@ import com.example.vibely_backend.service.oauth2.OAuth2GithubUser;
 import com.example.vibely_backend.entity.Provider;
 import org.springframework.web.servlet.view.RedirectView;
 import java.io.IOException;
+import java.time.LocalDateTime;
+
+import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 
 @Slf4j
 @RestController
@@ -43,16 +48,61 @@ public class AuthController {
     @Autowired
     private JWTService jwtService;
 
+@PostMapping("/send-otp")
+public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
+    String email = request.get("email");
+
+    // Kiểm tra email
+    if (email == null || email.isEmpty()) {
+        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+    }
+
+    try {
+        // Gửi OTP đến email
+        service.sendOtpToEmail(email);  // gọi từ UserService
+        return ResponseEntity.ok(new ApiResponse("success", "Mã xác thực đã được gửi đến email", null));
+    } catch (Exception e) {
+        return ResponseEntity.internalServerError()
+                .body(new ApiResponse("error", "Gửi mã xác thực thất bại", e.getMessage()));
+    }
+}
+@PostMapping("/verify-otp")
+public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> request) {
+    String email = request.get("email");
+    String otp = request.get("otp");
+
+    // Kiểm tra email
+    if (email == null || email.isEmpty()) {
+        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+    }
+
+    try {
+        // Xác thực OTP
+        if (service.verifyOtp(email, otp)) {
+            return ResponseEntity.ok(new ApiResponse("success", "Xác thực OTP thành công", null));
+        } else {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "OTP không hợp lệ hoặc đã hết hạn", null));
+        }
+    } catch (Exception e) {
+        return ResponseEntity.internalServerError()
+                .body(new ApiResponse("error", "Xác thực OTP thất bại", e.getMessage()));
+    }
+}
+
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest) {
         try {
-
             User user = new User();
             user.setUsername(registerRequest.getUsername());
             user.setEmail(registerRequest.getEmail());
             user.setPassword(registerRequest.getPassword());
             user.setGender(registerRequest.getGender());
             user.setDateOfBirth(registerRequest.getDateOfBirthAsLocalDate());
+
+            // Set createdAt và updatedAt cho user mới
+            LocalDateTime now = LocalDateTime.now();
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
 
             User registeredUser = service.register(user);
 
@@ -126,6 +176,11 @@ public class AuthController {
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2GoogleUser(oauth2User.getAttributes());
 
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
+
             User user = service.processOAuth2User(oauth2UserDetails, Provider.GOOGLE);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
 
@@ -152,6 +207,11 @@ public class AuthController {
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2FacebookUser(oauth2User.getAttributes());
 
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
+
             User user = service.processOAuth2User(oauth2UserDetails, Provider.FACEBOOK);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
 
@@ -177,6 +237,11 @@ public class AuthController {
             }
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2GithubUser(oauth2User.getAttributes());
+
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
 
             User user = service.processOAuth2User(oauth2UserDetails, Provider.GITHUB);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
@@ -243,6 +308,18 @@ public class AuthController {
             String errorUrl = "http://localhost:3000/user-login?error=" +
                     java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
             response.sendRedirect(errorUrl);
+        }
+    }
+
+    @DeleteMapping("/deleteAccount")
+    public ResponseEntity<ApiResponse> deleteAccount(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            service.deleteUserByEmail(email);
+            return ResponseEntity.ok(new ApiResponse("success", "Xóa tài khoản thành công", null));
+        } catch (Exception e) {
+            log.error("Xóa tài khoản thất bại: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Xóa tài khoản thất bại", e.getMessage()));
         }
     }
 }
