@@ -24,6 +24,18 @@ import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
 import com.example.vibely_backend.service.JWTService;
 import com.example.vibely_backend.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Date;
+import java.util.Map;
+import java.util.List;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -40,12 +52,18 @@ public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Autowired private MongoTemplate mongoTemplate;
-    @Autowired private UserService userService;
-    @Autowired private UserRepository userRepository;
-    @Autowired private BioRepository bioRepository;
-    @Autowired private JWTService jwtService;
-    @Autowired private CloudinaryService cloudinaryService;
+    @Autowired
+    private MongoTemplate mongoTemplate;
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private BioRepository bioRepository;
+    @Autowired
+    private JWTService jwtService;
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     private String getUserIdFromAuthHeader(String authHeader) {
         return jwtService.extractUserIdFromToken(authHeader.replace("Bearer ", ""));
@@ -88,11 +106,12 @@ public class UserController {
 
             if (profilePicture != null && !profilePicture.isEmpty()) {
                 if (!profilePicture.getContentType().startsWith("image/")) {
-                    return ResponseEntity.badRequest().body(new ApiResponse("error", "Ảnh đại diện không hợp lệ", null));
+                    return ResponseEntity.badRequest()
+                            .body(new ApiResponse("error", "Ảnh đại diện không hợp lệ", null));
                 }
                 Map<String, Object> avatarUpload = cloudinaryService.uploadFile(profilePicture, "user-avatars");
                 user.setProfilePicture((String) avatarUpload.get("secure_url"));
-            } 
+            }
 
             if (coverPicture != null && !coverPicture.isEmpty()) {
                 if (!coverPicture.getContentType().startsWith("image/")) {
@@ -164,7 +183,8 @@ public class UserController {
             return ResponseEntity.ok(new ApiResponse("success", "Cập nhật tiểu sử thành công", savedBio));
         } catch (Exception e) {
             logger.error("Lỗi khi cập nhật tiểu sử", e);
-            return ResponseEntity.badRequest().body(new ApiResponse("error", "Lỗi khi cập nhật tiểu sử", e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Lỗi khi cập nhật tiểu sử", e.getMessage()));
         }
     }
 
@@ -216,7 +236,8 @@ public class UserController {
             return ResponseEntity.ok(new ApiResponse("success", "Lấy thông tin hồ sơ thành công", userResponse));
         } catch (Exception e) {
             logger.error("Lỗi khi lấy thông tin hồ sơ", e);
-            return ResponseEntity.badRequest().body(new ApiResponse("error", "Lỗi khi lấy thông tin hồ sơ", e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Lỗi khi lấy thông tin hồ sơ", e.getMessage()));
         }
     }
 
