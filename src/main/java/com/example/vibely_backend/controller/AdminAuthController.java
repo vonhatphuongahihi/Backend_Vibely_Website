@@ -94,7 +94,7 @@ public class AdminAuthController {
             adminRepository.save(admin);
 
             // Tạo token
-            String token = jwtService.generateToken(admin.getUsername());
+            String token = jwtService.generateToken(admin.getEmail());
 
             // Tạo cookie
             Cookie cookie = new Cookie("token", token);
@@ -142,7 +142,7 @@ public class AdminAuthController {
                     .orElseThrow(() -> new RuntimeException("Admin không tồn tại"));
 
             // Tạo token với thông tin admin
-            String token = jwtService.generateToken(admin.getId(), request.getEmail());
+            String token = jwtService.generateToken(admin.getId(), admin.getEmail());
 
             // Tạo cookie
             Cookie cookie = new Cookie("token", token);

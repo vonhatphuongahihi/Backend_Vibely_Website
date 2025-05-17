@@ -26,6 +26,7 @@ import com.example.vibely_backend.service.oauth2.OAuth2GithubUser;
 import com.example.vibely_backend.entity.Provider;
 import org.springframework.web.servlet.view.RedirectView;
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 @Slf4j
 @RestController
@@ -46,13 +47,17 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest) {
         try {
-
             User user = new User();
             user.setUsername(registerRequest.getUsername());
             user.setEmail(registerRequest.getEmail());
             user.setPassword(registerRequest.getPassword());
             user.setGender(registerRequest.getGender());
             user.setDateOfBirth(registerRequest.getDateOfBirthAsLocalDate());
+
+            // Set createdAt và updatedAt cho user mới
+            LocalDateTime now = LocalDateTime.now();
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
 
             User registeredUser = service.register(user);
 
@@ -126,6 +131,11 @@ public class AuthController {
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2GoogleUser(oauth2User.getAttributes());
 
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
+
             User user = service.processOAuth2User(oauth2UserDetails, Provider.GOOGLE);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
 
@@ -152,6 +162,11 @@ public class AuthController {
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2FacebookUser(oauth2User.getAttributes());
 
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
+
             User user = service.processOAuth2User(oauth2UserDetails, Provider.FACEBOOK);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
 
@@ -177,6 +192,11 @@ public class AuthController {
             }
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2GithubUser(oauth2User.getAttributes());
+
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
 
             User user = service.processOAuth2User(oauth2UserDetails, Provider.GITHUB);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
@@ -243,6 +263,18 @@ public class AuthController {
             String errorUrl = "http://localhost:3000/user-login?error=" +
                     java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
             response.sendRedirect(errorUrl);
+        }
+    }
+
+    @DeleteMapping("/deleteAccount")
+    public ResponseEntity<ApiResponse> deleteAccount(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            service.deleteUserByEmail(email);
+            return ResponseEntity.ok(new ApiResponse("success", "Xóa tài khoản thành công", null));
+        } catch (Exception e) {
+            log.error("Xóa tài khoản thất bại: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Xóa tài khoản thất bại", e.getMessage()));
         }
     }
 }
