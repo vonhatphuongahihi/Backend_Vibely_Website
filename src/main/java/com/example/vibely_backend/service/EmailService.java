@@ -31,6 +31,39 @@ public class EmailService {
         message.setText("Mã xác thực của bạn là: " + code + ". Mã này sẽ hết hạn sau 10 phút.");
         mailSender.send(message);
     }
+    public void sendRegisterOtpCode(String to, String otpCode) {
+        try {
+            if (to == null || to.isEmpty()) {
+                throw new IllegalArgumentException("Email không được để trống");
+            }
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "Vibely");
+            helper.setTo(to);
+            helper.setSubject("Mã xác thực đăng ký tài khoản Vibely");
+
+            String htmlContent = """
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #086280;">Xác thực tài khoản Vibely</h2>
+                    <p>Chúng tôi nhận được yêu cầu đăng ký tài khoản với email này.</p>
+                    <p>Mã OTP xác thực của bạn là:</p>
+                    <div style="font-size: 24px; font-weight: bold; color: #d9534f;">%s</div>
+                    <p>Mã này có hiệu lực trong vòng 10 phút.</p>
+                    <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
+                    <p>Trân trọng,<br/><strong>Đội ngũ Vibely</strong></p>
+                </div>
+            """.formatted(otpCode);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Lỗi khi gửi email xác thực đăng ký: " + e.getMessage(), e);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("Lỗi mã hóa email xác thực đăng ký: " + e.getMessage(), e);
+        }
+    }
 
     public void sendInquiryResponseEmail(String to, String response, String username) {
         try {
@@ -74,4 +107,3 @@ public class EmailService {
         }
     }
 }
-

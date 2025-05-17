@@ -43,6 +43,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Random;
 
 @Slf4j
 @Service
@@ -64,6 +66,43 @@ public class UserService {
     private BioRepository bioRepository;
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+
+     @Autowired
+        private EmailService emailService;
+    
+        // Lưu trữ OTP tạm thời
+        private Map<String, String> otpStorage = new ConcurrentHashMap<>();
+    
+        public void sendOtpToEmail(String email) {
+            // Tạo mã OTP ngẫu nhiên 6 chữ số
+            String otp = String.format("%06d", new Random().nextInt(1000000));
+    
+            // Lưu OTP tạm thời
+            otpStorage.put(email, otp);
+    
+            // Gửi OTP qua email
+            emailService.sendRegisterOtpCode(email, otp);
+        }
+    
+        public boolean verifyOtp(String email, String otp) {
+            // Kiểm tra xem email có tồn tại trong otpStorage không
+            if (!otpStorage.containsKey(email)) {
+                log.warn("OTP không tồn tại cho email: " + email);
+                return false; // Không tìm thấy OTP
+            }
+    
+            // Lấy OTP đã lưu và so sánh
+            String storedOtp = otpStorage.get(email);
+            if (storedOtp.equals(otp)) {
+                // Xóa OTP sau khi xác thực thành công
+                otpStorage.remove(email);
+                log.info("Xác thực OTP thành công cho email: " + email);
+                return true; // Xác thực thành công
+            } else {
+                log.warn("OTP không hợp lệ cho email: " + email);
+                return false; // OTP không hợp lệ
+            }
+        }
 
     public User register(User user) {
 
