@@ -76,42 +76,42 @@ public class UserService {
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
-     @Autowired
-        private EmailService emailService;
-    
-        // Lưu trữ OTP tạm thời
-        private Map<String, String> otpStorage = new ConcurrentHashMap<>();
-    
-        public void sendOtpToEmail(String email) {
-            // Tạo mã OTP ngẫu nhiên 6 chữ số
-            String otp = String.format("%06d", new Random().nextInt(1000000));
-    
-            // Lưu OTP tạm thời
-            otpStorage.put(email, otp);
-    
-            // Gửi OTP qua email
-            emailService.sendRegisterOtpCode(email, otp);
+    @Autowired
+    private EmailService emailService;
+
+    // Lưu trữ OTP tạm thời
+    private Map<String, String> otpStorage = new ConcurrentHashMap<>();
+
+    public void sendOtpToEmail(String email) {
+        // Tạo mã OTP ngẫu nhiên 6 chữ số
+        String otp = String.format("%06d", new Random().nextInt(1000000));
+
+        // Lưu OTP tạm thời
+        otpStorage.put(email, otp);
+
+        // Gửi OTP qua email
+        emailService.sendRegisterOtpCode(email, otp);
+    }
+
+    public boolean verifyOtp(String email, String otp) {
+        // Kiểm tra xem email có tồn tại trong otpStorage không
+        if (!otpStorage.containsKey(email)) {
+            log.warn("OTP không tồn tại cho email: " + email);
+            return false; // Không tìm thấy OTP
         }
-    
-        public boolean verifyOtp(String email, String otp) {
-            // Kiểm tra xem email có tồn tại trong otpStorage không
-            if (!otpStorage.containsKey(email)) {
-                log.warn("OTP không tồn tại cho email: " + email);
-                return false; // Không tìm thấy OTP
-            }
-    
-            // Lấy OTP đã lưu và so sánh
-            String storedOtp = otpStorage.get(email);
-            if (storedOtp.equals(otp)) {
-                // Xóa OTP sau khi xác thực thành công
-                otpStorage.remove(email);
-                log.info("Xác thực OTP thành công cho email: " + email);
-                return true; // Xác thực thành công
-            } else {
-                log.warn("OTP không hợp lệ cho email: " + email);
-                return false; // OTP không hợp lệ
-            }
+
+        // Lấy OTP đã lưu và so sánh
+        String storedOtp = otpStorage.get(email);
+        if (storedOtp.equals(otp)) {
+            // Xóa OTP sau khi xác thực thành công
+            otpStorage.remove(email);
+            log.info("Xác thực OTP thành công cho email: " + email);
+            return true; // Xác thực thành công
+        } else {
+            log.warn("OTP không hợp lệ cho email: " + email);
+            return false; // OTP không hợp lệ
         }
+    }
 
     public User register(User user) {
 
@@ -710,6 +710,21 @@ public class UserService {
 
     public void deleteUserByEmail(String email) {
         userRepository.deleteAll(userRepository.findAllByEmail(email));
+    }
+
+    public void changePassword(String email, String oldPassword, String newPassword) {
+        User user = findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        // Kiểm tra mật khẩu cũ
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new RuntimeException("Mật khẩu cũ không đúng");
+        }
+
+        // Mã hóa và cập nhật mật khẩu mới
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 
 }
