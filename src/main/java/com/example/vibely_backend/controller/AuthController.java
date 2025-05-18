@@ -6,6 +6,7 @@ import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.service.UserService;
 import com.example.vibely_backend.dto.request.RegisterRequest;
 import com.example.vibely_backend.dto.request.LoginRequest;
+import com.example.vibely_backend.dto.request.ChangePasswordRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.servlet.http.Cookie;
@@ -48,46 +49,48 @@ public class AuthController {
     @Autowired
     private JWTService jwtService;
 
-@PostMapping("/send-otp")
-public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
-    String email = request.get("email");
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
 
-    // Kiểm tra email
-    if (email == null || email.isEmpty()) {
-        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
-    }
-
-    try {
-        // Gửi OTP đến email
-        service.sendOtpToEmail(email);  // gọi từ UserService
-        return ResponseEntity.ok(new ApiResponse("success", "Mã xác thực đã được gửi đến email", null));
-    } catch (Exception e) {
-        return ResponseEntity.internalServerError()
-                .body(new ApiResponse("error", "Gửi mã xác thực thất bại", e.getMessage()));
-    }
-}
-@PostMapping("/verify-otp")
-public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> request) {
-    String email = request.get("email");
-    String otp = request.get("otp");
-
-    // Kiểm tra email
-    if (email == null || email.isEmpty()) {
-        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
-    }
-
-    try {
-        // Xác thực OTP
-        if (service.verifyOtp(email, otp)) {
-            return ResponseEntity.ok(new ApiResponse("success", "Xác thực OTP thành công", null));
-        } else {
-            return ResponseEntity.badRequest().body(new ApiResponse("error", "OTP không hợp lệ hoặc đã hết hạn", null));
+        // Kiểm tra email
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
         }
-    } catch (Exception e) {
-        return ResponseEntity.internalServerError()
-                .body(new ApiResponse("error", "Xác thực OTP thất bại", e.getMessage()));
+
+        try {
+            // Gửi OTP đến email
+            service.sendOtpToEmail(email); // gọi từ UserService
+            return ResponseEntity.ok(new ApiResponse("success", "Mã xác thực đã được gửi đến email", null));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(new ApiResponse("error", "Gửi mã xác thực thất bại", e.getMessage()));
+        }
     }
-}
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String otp = request.get("otp");
+
+        // Kiểm tra email
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+        }
+
+        try {
+            // Xác thực OTP
+            if (service.verifyOtp(email, otp)) {
+                return ResponseEntity.ok(new ApiResponse("success", "Xác thực OTP thành công", null));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error", "OTP không hợp lệ hoặc đã hết hạn", null));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(new ApiResponse("error", "Xác thực OTP thất bại", e.getMessage()));
+        }
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest) {
@@ -320,6 +323,45 @@ public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> re
         } catch (Exception e) {
             log.error("Xóa tài khoản thất bại: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new ApiResponse("error", "Xóa tài khoản thất bại", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = service.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+            // Kiểm tra nếu là tài khoản OAuth
+            if (user.getProvider() != Provider.LOCAL) {
+                String providerName = user.getProvider().toString().toLowerCase();
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error",
+                                String.format("Không thể đổi mật khẩu vì bạn đăng nhập bằng %s", providerName),
+                                null));
+            }
+
+            // Đổi mật khẩu
+            service.changePassword(email, request.getOldPassword(), request.getNewPassword());
+            return ResponseEntity.ok(new ApiResponse("success", "Đổi mật khẩu thành công", null));
+        } catch (RuntimeException e) {
+            // Xử lý các lỗi cụ thể
+            String errorMessage;
+            if (e.getMessage().contains("Mật khẩu cũ không đúng")) {
+                errorMessage = "Mật khẩu cũ không đúng";
+            } else {
+                errorMessage = e.getMessage();
+            }
+            log.error("Đổi mật khẩu thất bại: {}", errorMessage);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", errorMessage, null));
+        } catch (Exception e) {
+            log.error("Đổi mật khẩu thất bại: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Đổi mật khẩu thất bại", e.getMessage()));
         }
     }
 }
