@@ -1,12 +1,20 @@
 package com.example.vibely_backend.controller;
 
-import com.example.vibely_backend.dto.request.UpdatePasswordRequest;
-import com.example.vibely_backend.service.AdminService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.vibely_backend.dto.request.UpdatePasswordRequest;
+import com.example.vibely_backend.service.AdminService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/admin")
@@ -20,14 +28,18 @@ public class AdminUpdatePasswordController {
             @Valid @RequestBody UpdatePasswordRequest request,
             Authentication authentication) {
         try {
-            // Lấy username từ token
             String username = authentication.getName();
-
             adminService.updatePassword(username, request.getOldPassword(), request.getNewPassword());
-            return ResponseEntity.ok().body("Cập nhật mật khẩu thành công");
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Cập nhật mật khẩu thành công");
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.out.println("Không thể cập nhật mật khẩu: " + e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 }
