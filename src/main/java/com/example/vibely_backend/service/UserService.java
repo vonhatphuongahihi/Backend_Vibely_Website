@@ -18,6 +18,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
@@ -34,6 +39,7 @@ import com.example.vibely_backend.entity.Provider;
 import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.repository.BioRepository;
+import com.example.vibely_backend.service.CloudinaryService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,6 +49,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Random;
 
 @Slf4j
 @Service
@@ -63,7 +71,47 @@ public class UserService {
     @Autowired
     private BioRepository bioRepository;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+
+     @Autowired
+        private EmailService emailService;
+    
+        // Lưu trữ OTP tạm thời
+        private Map<String, String> otpStorage = new ConcurrentHashMap<>();
+    
+        public void sendOtpToEmail(String email) {
+            // Tạo mã OTP ngẫu nhiên 6 chữ số
+            String otp = String.format("%06d", new Random().nextInt(1000000));
+    
+            // Lưu OTP tạm thời
+            otpStorage.put(email, otp);
+    
+            // Gửi OTP qua email
+            emailService.sendRegisterOtpCode(email, otp);
+        }
+    
+        public boolean verifyOtp(String email, String otp) {
+            // Kiểm tra xem email có tồn tại trong otpStorage không
+            if (!otpStorage.containsKey(email)) {
+                log.warn("OTP không tồn tại cho email: " + email);
+                return false; // Không tìm thấy OTP
+            }
+    
+            // Lấy OTP đã lưu và so sánh
+            String storedOtp = otpStorage.get(email);
+            if (storedOtp.equals(otp)) {
+                // Xóa OTP sau khi xác thực thành công
+                otpStorage.remove(email);
+                log.info("Xác thực OTP thành công cho email: " + email);
+                return true; // Xác thực thành công
+            } else {
+                log.warn("OTP không hợp lệ cho email: " + email);
+                return false; // OTP không hợp lệ
+            }
+        }
 
     public User register(User user) {
 
@@ -534,9 +582,62 @@ public class UserService {
 
     public User processOAuth2User(OAuth2UserDetails oauth2UserDetails, Provider provider) {
         try {
-            Optional<User> userOptional = findByEmail(oauth2UserDetails.getEmail());
             User user;
+            if (provider == Provider.GITHUB) {
+                // Luôn sinh email từ username cho GitHub
+                String username = oauth2UserDetails.getName();
+                if (username == null || username.isEmpty()) {
+                    username = "githubuser" + System.currentTimeMillis();
+                }
+                username = toAscii(username);
+                String email = username + "@github.local";
 
+                Optional<User> userOptional = findByEmail(email);
+                if (userOptional.isPresent()) {
+                    user = userOptional.get();
+                    user.setUsername(oauth2UserDetails.getName());
+                    String imageUrl = oauth2UserDetails.getImageUrl();
+                    if (imageUrl != null && !imageUrl.isEmpty()) {
+                        user.setProfilePicture(imageUrl);
+                    }
+                    return userRepository.save(user);
+                } else {
+                    // Tạo user mới cho GitHub
+                    user = new User();
+                    user.setUsername(oauth2UserDetails.getName());
+                    user.setEmail(email);
+                    user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                    user.setProvider(provider);
+                    user.setEnabled(true);
+                    user.setRole("ROLE_USER");
+                    user.setFollowers(new ArrayList<>());
+                    user.setFollowings(new ArrayList<>());
+                    user.setPosts(new ArrayList<>());
+                    user.setLikedPosts(new ArrayList<>());
+                    user.setSavedPosts(new ArrayList<>());
+                    user.setSavedDocuments(new ArrayList<>());
+                    String imageUrl = oauth2UserDetails.getImageUrl();
+                    String profilePictureUrl = (imageUrl != null && !imageUrl.isEmpty()) ? imageUrl
+                            : "https://res.cloudinary.com/dxdqjj2ww/image/upload/v1747490612/default-avatar_no0qbb.png";
+                    user.setProfilePicture(profilePictureUrl);
+                    user.setCoverPicture(
+                            "https://res.cloudinary.com/dxdqjj2ww/image/upload/v1747490613/default-cover_wheyvw.png");
+                    user.setPostsCount(0);
+                    user.setFollowerCount(0);
+                    user.setFollowingCount(0);
+                    user.setBio(null);
+                    user = userRepository.save(user);
+                    Bio bio = new Bio();
+                    bio.setUser(user);
+                    bio.setCreatedAt(new Date());
+                    bio.setUpdatedAt(new Date());
+                    bio = bioRepository.save(bio);
+                    user.setBio(bio);
+                    return userRepository.save(user);
+                }
+            }
+            // Các provider khác giữ nguyên
+            Optional<User> userOptional = findByEmail(oauth2UserDetails.getEmail());
             if (userOptional.isPresent()) {
                 user = userOptional.get();
                 if (!user.getProvider().equals(provider)) {
@@ -544,17 +645,22 @@ public class UserService {
                             + ". Vui lòng đăng nhập bằng " + user.getProvider());
                 }
                 user.setUsername(oauth2UserDetails.getName());
-                // Cập nhật ảnh đại diện nếu có
-                String imageUrl = oauth2UserDetails.getImageUrl();
-                if (imageUrl != null && !imageUrl.isEmpty()) {
-                    user.setProfilePicture(imageUrl);
+                if (provider == Provider.GOOGLE) {
+                    user.setProfilePicture(
+                            "https://res.cloudinary.com/dxdqjj2ww/image/upload/v1747490612/default-avatar_no0qbb.png");
+                } else {
+                    String imageUrl = oauth2UserDetails.getImageUrl();
+                    if (imageUrl != null && !imageUrl.isEmpty()) {
+                        user.setProfilePicture(imageUrl);
+                    }
                 }
                 return userRepository.save(user);
             } else {
-                // Tạo user mới
+                // Tạo user mới cho provider khác
                 user = new User();
                 user.setUsername(oauth2UserDetails.getName());
-                user.setEmail(oauth2UserDetails.getEmail());
+                String email = oauth2UserDetails.getEmail();
+                user.setEmail(email);
                 user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
                 user.setProvider(provider);
                 user.setEnabled(true);
@@ -565,37 +671,45 @@ public class UserService {
                 user.setLikedPosts(new ArrayList<>());
                 user.setSavedPosts(new ArrayList<>());
                 user.setSavedDocuments(new ArrayList<>());
-
-                // Sử dụng ảnh đại diện từ OAuth2 provider
-                String imageUrl = oauth2UserDetails.getImageUrl();
-                user.setProfilePicture(imageUrl != null && !imageUrl.isEmpty() ? imageUrl
-                        : "https://res.cloudinary.com/dxav6uhnu/image/upload/v1715529600/vibely/default-avatar.png");
-
+                String profilePictureUrl;
+                if (provider == Provider.GOOGLE) {
+                    profilePictureUrl = "https://res.cloudinary.com/dxdqjj2ww/image/upload/v1747490612/default-avatar_no0qbb.png";
+                } else {
+                    String imageUrl = oauth2UserDetails.getImageUrl();
+                    profilePictureUrl = (imageUrl != null && !imageUrl.isEmpty()) ? imageUrl
+                            : "https://res.cloudinary.com/dxdqjj2ww/image/upload/v1747490612/default-avatar_no0qbb.png";
+                }
+                user.setProfilePicture(profilePictureUrl);
                 user.setCoverPicture(
-                        "https://res.cloudinary.com/dxav6uhnu/image/upload/v1715529600/vibely/default-cover.png");
+                        "https://res.cloudinary.com/dxdqjj2ww/image/upload/v1747490613/default-cover_wheyvw.png");
                 user.setPostsCount(0);
                 user.setFollowerCount(0);
                 user.setFollowingCount(0);
                 user.setBio(null);
-
-                // Lưu user trước
                 user = userRepository.save(user);
-
-                // Tạo và lưu bio
                 Bio bio = new Bio();
                 bio.setUser(user);
                 bio.setCreatedAt(new Date());
                 bio.setUpdatedAt(new Date());
                 bio = bioRepository.save(bio);
-
-                // Cập nhật user với bio
                 user.setBio(bio);
                 return userRepository.save(user);
             }
         } catch (Exception e) {
-            log.error("Lỗi: {}", e.getMessage());
+            log.error("Lỗi xử lý OAuth2 user: {}", e.getMessage(), e);
             throw new RuntimeException("Không thể xử lý thông tin người dùng OAuth2: " + e.getMessage());
         }
+    }
+
+    public static String toAscii(String input) {
+        String normalized = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD);
+        return normalized.replaceAll("[^\\p{ASCII}]", "")
+                .replaceAll("[^a-zA-Z0-9]", "")
+                .toLowerCase();
+    }
+
+    public void deleteUserByEmail(String email) {
+        userRepository.deleteAll(userRepository.findAllByEmail(email));
     }
 
 }

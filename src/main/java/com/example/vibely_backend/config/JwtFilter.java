@@ -99,6 +99,12 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/auth/") || path.startsWith("/admin/auth/");
+        // Chỉ loại trừ các endpoint public, KHÔNG loại trừ /auth/deleteAccount
+        return path.equals("/auth/login")
+                || path.equals("/auth/register")
+                || path.startsWith("/auth/google")
+                || path.startsWith("/auth/facebook")
+                || path.startsWith("/auth/github")
+                || path.startsWith("/admin/auth/");
     }
 }

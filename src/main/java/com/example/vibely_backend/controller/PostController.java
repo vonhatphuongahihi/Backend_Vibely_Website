@@ -4,7 +4,10 @@ import com.example.vibely_backend.entity.Post;
 import com.example.vibely_backend.entity.Story;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.dto.response.PostDTO;
+import com.example.vibely_backend.dto.response.StoryDTO;
+import com.example.vibely_backend.dto.response.UserMiniDTO;
 import com.example.vibely_backend.service.PostService;
+import com.example.vibely_backend.service.StoryService;
 import com.example.vibely_backend.repository.PostRepository;
 import com.example.vibely_backend.repository.StoryRepository;
 import com.example.vibely_backend.repository.UserRepository;
@@ -35,6 +38,9 @@ public class PostController {
 
     @Autowired
     private PostService postService;
+
+    @Autowired
+    private StoryService storyService;
 
     @Autowired
     private PostRepository postRepository;
@@ -155,9 +161,11 @@ public class PostController {
             newStory.setUpdatedAt(new Date());
 
             Story savedStory = storyRepository.save(newStory);
-            return ResponseHandler.response(HttpStatus.CREATED, "Tạo story thành công", savedStory);
+            StoryDTO storyDTO = new StoryDTO(savedStory, new UserMiniDTO(user));
+            return ResponseHandler.response(HttpStatus.CREATED, "Tạo story thành công", storyDTO);
 
         } catch (IOException e) {
+            e.printStackTrace();
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Tạo story thất bại", e.getMessage());
         }
     }
@@ -177,10 +185,11 @@ public class PostController {
     @GetMapping("/story")
     public ResponseEntity<?> getAllStories() {
         try {
-            List<Story> stories = storyRepository.findAll();
+            List<StoryDTO> stories = storyService.getAllStories();
             stories.sort((s1, s2) -> s2.getCreatedAt().compareTo(s1.getCreatedAt()));
             return ResponseHandler.response(HttpStatus.OK, "Lấy tất cả story thành công", stories);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Lấy tất cả story thất bại",
                     e.getMessage());
         }
@@ -247,8 +256,8 @@ public class PostController {
 
             return ResponseHandler.response(HttpStatus.OK, action, responseData);
         } catch (Exception e) {
-            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thích bài viết thất bại",
-                    e.getMessage());
+            e.printStackTrace();
+            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thích bài viết thất bại", e.getMessage());
         }
     }
 
@@ -387,9 +396,11 @@ public class PostController {
 
             story.setUpdatedAt(new Date());
             Story updatedStory = storyRepository.save(story);
-            return ResponseHandler.response(HttpStatus.OK, action, updatedStory);
+            StoryDTO storyDTO = new StoryDTO(updatedStory, new UserMiniDTO(user));
+            return ResponseHandler.response(HttpStatus.OK, action, storyDTO);
 
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thả tym story thất bại", e.getMessage());
         }
     }
