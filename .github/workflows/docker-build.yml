@@ -20,6 +20,65 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
+    - name: Create application.properties
+      run: |
+        cat << EOF > src/main/resources/application.properties
+        # Server Configuration
+        server.port=8081
+        spring.application.name=vibely-backend
+
+        # MongoDB Configuration
+        spring.data.mongodb.uri=${{ secrets.MONGODB_URI }}
+        spring.data.mongodb.database=Vibely
+        spring.data.mongodb.auto-index-creation=true
+
+        # JWT Configuration
+        jwt.secret=${{ secrets.JWT_SECRET }}
+        jwt.expiration=7776000
+
+        # Google OAuth2 Configuration
+        spring.security.oauth2.client.registration.google.client-id=${{ secrets.GOOGLE_CLIENT_ID }}
+        spring.security.oauth2.client.registration.google.client-secret=${{ secrets.GOOGLE_CLIENT_SECRET }}
+        spring.security.oauth2.client.registration.google.redirect-uri=http://localhost:8081/auth/google/callback
+        spring.security.oauth2.client.registration.google.scope=email,profile
+
+        # Facebook OAuth2 Configuration
+        spring.security.oauth2.client.registration.facebook.client-id=${{ secrets.FACEBOOK_CLIENT_ID }}
+        spring.security.oauth2.client.registration.facebook.client-secret=${{ secrets.FACEBOOK_CLIENT_SECRET }}
+        spring.security.oauth2.client.registration.facebook.redirect-uri=http://localhost:8081/auth/facebook/callback
+        spring.security.oauth2.client.registration.facebook.scope=email,public_profile
+
+        # GitHub OAuth2 Configuration
+        spring.security.oauth2.client.registration.github.client-id=${{ secrets.GH_CLIENT_ID }}
+        spring.security.oauth2.client.registration.github.client-secret=${{ secrets.GH_CLIENT_SECRET }}
+        spring.security.oauth2.client.registration.github.redirect-uri=http://localhost:8081/auth/github/callback
+        spring.security.oauth2.client.registration.github.scope=user:email,read:user
+
+        # Mail Configuration
+        spring.mail.host=smtp.gmail.com
+        spring.mail.port=587
+        spring.mail.username=${{ secrets.MAIL_USERNAME }}
+        spring.mail.password=${{ secrets.MAIL_PASSWORD }}
+        spring.mail.properties.mail.smtp.auth=true
+        spring.mail.properties.mail.smtp.starttls.enable=true
+
+        # Cloudinary Configuration
+        cloudinary.cloud-name=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+        cloudinary.api-key=${{ secrets.CLOUDINARY_API_KEY }}
+        cloudinary.api-secret=${{ secrets.CLOUDINARY_API_SECRET }}
+
+        # ChatGPT Configuration
+        openai.api.key=${{ secrets.CHATGPT_API_KEY }}
+        openai.api.url=https://api.openai.com/v1/chat/completions
+
+        # Frontend URL
+        frontend.url=http://localhost:3000
+
+        # File Upload Configuration
+        spring.servlet.multipart.max-file-size=50MB
+        spring.servlet.multipart.max-request-size=50MB
+        EOF
+
     - name: Build with Maven
       run: mvn -B package --file pom.xml
 
