@@ -1,0 +1,54 @@
+# Server Configuration
+server.port=8081
+spring.application.name=vibely-backend
+
+# MongoDB Configuration
+spring.data.mongodb.uri=mongodb+srv://username:password@your-cluster.mongodb.net/your-database
+spring.data.mongodb.database=your-database
+spring.data.mongodb.auto-index-creation=true
+
+# JWT Configuration
+jwt.secret=your_jwt_secret_key
+jwt.expiration=7776000
+
+# Google OAuth2 Configuration
+spring.security.oauth2.client.registration.google.client-id=your_google_client_id
+spring.security.oauth2.client.registration.google.client-secret=your_google_client_secret
+spring.security.oauth2.client.registration.google.redirect-uri=http://localhost:8081/auth/google/callback
+spring.security.oauth2.client.registration.google.scope=email,profile
+
+# Facebook OAuth2 Configuration
+spring.security.oauth2.client.registration.facebook.client-id=your_facebook_client_id
+spring.security.oauth2.client.registration.facebook.client-secret=your_facebook_client_secret
+spring.security.oauth2.client.registration.facebook.redirect-uri=http://localhost:8081/auth/facebook/callback
+spring.security.oauth2.client.registration.facebook.scope=email,public_profile
+
+# GitHub OAuth2 Configuration
+spring.security.oauth2.client.registration.github.client-id=your_github_client_id
+spring.security.oauth2.client.registration.github.client-secret=your_github_client_secret
+spring.security.oauth2.client.registration.github.redirect-uri=http://localhost:8081/auth/github/callback
+spring.security.oauth2.client.registration.github.scope=user:email,read:user
+
+# Mail Configuration
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your_email@gmail.com
+spring.mail.password=your_app_password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# Cloudinary Configuration
+cloudinary.cloud-name=your_cloud_name
+cloudinary.api-key=your_api_key
+cloudinary.api-secret=your_api_secret
+
+#ChatGPT Configuration
+openai.api.key=your_api_key
+openai.api.url=https://api.openai.com/v1/chat/completions
+
+# Frontend URL
+frontend.url=http://localhost:3000
+
+# File Upload Configuration
+spring.servlet.multipart.max-file-size=50MB
+spring.servlet.multipart.max-request-size=50MB
