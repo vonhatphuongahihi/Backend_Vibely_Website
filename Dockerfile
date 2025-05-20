@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy file jar đã build vào image
 COPY target/*.jar app.jar
 
-# Copy file .env
-COPY .env .env
+# Copy file application.properties
+COPY src/main/resources/application.properties /app/application.properties
 
 # Expose port 
 EXPOSE 8081

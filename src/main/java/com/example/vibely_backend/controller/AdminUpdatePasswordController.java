@@ -1,9 +1,21 @@
 package com.example.vibely_backend.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.vibely_backend.dto.request.UpdatePasswordRequest;
 import com.example.vibely_backend.service.AdminService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
