@@ -11,11 +11,14 @@ import org.springframework.stereotype.Repository;
 import com.example.vibely_backend.dto.response.MutualFriendResponse;
 import com.example.vibely_backend.dto.response.SimpleUserResponse;
 import com.example.vibely_backend.dto.response.UserProfileResponse;
+import com.example.vibely_backend.entity.Provider;
 import com.example.vibely_backend.entity.User;
 
 @Repository
 public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByEmail(String email);
+
+    Optional<User> findByEmailAndProvider(String email, Provider provider);
 
     Optional<User> findByUsername(String username);
 

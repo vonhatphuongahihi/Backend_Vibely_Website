@@ -1,8 +1,6 @@
 package com.example.vibely_backend.controller;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.vibely_backend.entity.Provider;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.EmailService;
@@ -38,7 +37,7 @@ public class ForgotPasswordController {
         Map<String, String> response = new HashMap<>();
         try {
             String email = request.get("email");
-            Optional<User> optionalUser = userRepository.findByEmail(email);
+            Optional<User> optionalUser = userRepository.findByEmailAndProvider(email, Provider.LOCAL);
 
             if (optionalUser.isEmpty()) {
                 response.put("message", "Không tìm thấy tài khoản với email này");
