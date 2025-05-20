@@ -37,7 +37,7 @@ import jakarta.validation.constraints.NotBlank;
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
-        "http://127.0.0.1:3000" }, allowCredentials = "true")
+        "http://127.0.0.1:3000", "https://vibely-study-social-website.vercel.app" }, allowCredentials = "true")
 public class AuthController {
 
     @Autowired
@@ -297,7 +297,8 @@ public class AuthController {
             String encodedEmail = java.net.URLEncoder.encode(user.getEmail(), "UTF-8");
 
             // Chuyển hướng đến frontend kèm theo token và thông tin người dùng
-            String redirectUrl = String.format("http://localhost:3000?token=%s&userId=%s&email=%s&username=%s",
+            String redirectUrl = String.format(
+                    "https://vibely-study-social-website.vercel.app?token=%s&userId=%s&email=%s&username=%s",
                     encodedToken,
                     user.getId(),
                     encodedEmail,
@@ -308,7 +309,7 @@ public class AuthController {
             response.sendRedirect(redirectUrl);
         } catch (Exception e) {
             log.error("OAuth2 login error: {}", e.getMessage());
-            String errorUrl = "http://localhost:3000/user-login?error=" +
+            String errorUrl = "https://vibely-study-social-website.vercel.app/user-login?error=" +
                     java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
             response.sendRedirect(errorUrl);
         }

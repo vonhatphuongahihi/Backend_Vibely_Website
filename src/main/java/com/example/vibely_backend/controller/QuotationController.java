@@ -15,7 +15,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/quotations")
 @CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
-        "http://127.0.0.1:3000" }, allowCredentials = "true")
+        "http://127.0.0.1:3000", "https://vibely-study-social-website.vercel.app" }, allowCredentials = "true")
 public class QuotationController {
     @Autowired
     private QuotationService quotationService;

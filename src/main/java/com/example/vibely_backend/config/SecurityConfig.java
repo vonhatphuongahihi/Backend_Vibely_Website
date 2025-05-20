@@ -32,103 +32,105 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    @Qualifier("myUserDetailsService")
-    private UserDetailsService userDetailsService;
+        @Autowired
+        @Qualifier("myUserDetailsService")
+        private UserDetailsService userDetailsService;
 
-    @Autowired
-    @Qualifier("myAdminDetailsService")
-    private UserDetailsService adminDetailsService;
+        @Autowired
+        @Qualifier("myAdminDetailsService")
+        private UserDetailsService adminDetailsService;
 
-    @Autowired
-    private JwtFilter jwtFilter;
+        @Autowired
+        private JwtFilter jwtFilter;
 
-    @Autowired
-    private CustomOAuth2UserService customOAuth2UserService;
+        @Autowired
+        private CustomOAuth2UserService customOAuth2UserService;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/admin/auth/**", "/error", "/forgot-password/**",
-                                "/oauth2/**", "/login/**", "/schedules/**", "/users/**",
-                                "/quotations/**", "/quizzes/**", "/learning-trees/**",
-                                "/learning-goals/**", "/chatbot/**")
-                        .permitAll()
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-                        .anyRequest().authenticated())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                        .maximumSessions(1))
-                .authenticationProvider(userAuthenticationProvider())
-                .authenticationProvider(adminAuthenticationProvider())
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/auth/login")
-                        .defaultSuccessUrl("/auth/login-success", true)
-                        .failureUrl("/auth/login-failure")
-                        .authorizationEndpoint(authorization -> authorization
-                                .baseUri("/oauth2/authorize"))
-                        .redirectionEndpoint(redirection -> redirection
-                                .baseUri("/auth/*/callback"))
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService)))
-                .build();
-    }
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                return http
+                                .csrf(csrf -> csrf.disable())
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/auth/**", "/admin/auth/**", "/error",
+                                                                "/forgot-password/**",
+                                                                "/oauth2/**", "/login/**", "/schedules/**", "/users/**",
+                                                                "/quotations/**", "/quizzes/**", "/learning-trees/**",
+                                                                "/learning-goals/**", "/chatbot/**")
+                                                .permitAll()
+                                                .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                                                .anyRequest().authenticated())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                                                .maximumSessions(1))
+                                .authenticationProvider(userAuthenticationProvider())
+                                .authenticationProvider(adminAuthenticationProvider())
+                                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                                .oauth2Login(oauth2 -> oauth2
+                                                .loginPage("/auth/login")
+                                                .defaultSuccessUrl("/auth/login-success", true)
+                                                .failureUrl("/auth/login-failure")
+                                                .authorizationEndpoint(authorization -> authorization
+                                                                .baseUri("/oauth2/authorize"))
+                                                .redirectionEndpoint(redirection -> redirection
+                                                                .baseUri("/auth/*/callback"))
+                                                .userInfoEndpoint(userInfo -> userInfo
+                                                                .userService(customOAuth2UserService)))
+                                .build();
+        }
 
-    @Bean
-    public AuthenticationProvider userAuthenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setPasswordEncoder(passwordEncoder());
-        provider.setUserDetailsService(userDetailsService);
-        return provider;
-    }
+        @Bean
+        public AuthenticationProvider userAuthenticationProvider() {
+                DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+                provider.setPasswordEncoder(passwordEncoder());
+                provider.setUserDetailsService(userDetailsService);
+                return provider;
+        }
 
-    @Bean
-    public AuthenticationProvider adminAuthenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setPasswordEncoder(passwordEncoder());
-        provider.setUserDetailsService(adminDetailsService);
-        return provider;
-    }
+        @Bean
+        public AuthenticationProvider adminAuthenticationProvider() {
+                DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+                provider.setPasswordEncoder(passwordEncoder());
+                provider.setUserDetailsService(adminDetailsService);
+                return provider;
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager() {
-        return new ProviderManager(Arrays.asList(
-                userAuthenticationProvider(),
-                adminAuthenticationProvider()));
-    }
+        @Bean
+        public AuthenticationManager authenticationManager() {
+                return new ProviderManager(Arrays.asList(
+                                userAuthenticationProvider(),
+                                adminAuthenticationProvider()));
+        }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3001",
-                "http://localhost:3000",
-                "http://127.0.0.1:3001",
-                "http://127.0.0.1:3000"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "X-Requested-With",
-                "Accept",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                configuration.setAllowedOrigins(Arrays.asList(
+                                "http://localhost:3001",
+                                "http://localhost:3000",
+                                "http://127.0.0.1:3001",
+                                "http://127.0.0.1:3000",
+                                "https://vibely-study-social-website.vercel.app"));
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+                configuration.setAllowedHeaders(Arrays.asList(
+                                "Authorization",
+                                "Content-Type",
+                                "X-Requested-With",
+                                "Accept",
+                                "Origin",
+                                "Access-Control-Request-Method",
+                                "Access-Control-Request-Headers"));
+                configuration.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
+                configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }
