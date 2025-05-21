@@ -1,6 +1,7 @@
 package com.example.vibely_backend.entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -8,8 +9,8 @@ import java.util.Objects;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
-import com.fasterxml.jackson.annotation.JsonManagedReference; // Import thêm
-import com.fasterxml.jackson.annotation.JsonBackReference;   // Import thêm
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -38,13 +39,9 @@ public class User {
     private String coverPicture;
 
     @DBRef
-    @JsonIgnore
     private List<User> followers = new ArrayList<>();
-
     @DBRef
-    @JsonIgnore
     private List<User> followings = new ArrayList<>();
-
     @DBRef
     private List<Post> posts = new ArrayList<>();
     @DBRef
@@ -71,6 +68,14 @@ public class User {
     private Provider provider = Provider.LOCAL;
     private String role = "ROLE_USER";
 
+    @CreatedDate
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime updatedAt;
+
     @Override
     public boolean equals(Object o) {
         if (this == o)
@@ -84,5 +89,10 @@ public class User {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "User{id='" + id + "', username='" + username + "', email='" + email + "'}";
     }
 }

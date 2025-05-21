@@ -6,6 +6,7 @@ import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.service.UserService;
 import com.example.vibely_backend.dto.request.RegisterRequest;
 import com.example.vibely_backend.dto.request.LoginRequest;
+import com.example.vibely_backend.dto.request.ChangePasswordRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.servlet.http.Cookie;
@@ -26,6 +27,7 @@ import com.example.vibely_backend.service.oauth2.OAuth2GithubUser;
 import com.example.vibely_backend.entity.Provider;
 import org.springframework.web.servlet.view.RedirectView;
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import jakarta.validation.Valid;
@@ -35,7 +37,7 @@ import jakarta.validation.constraints.NotBlank;
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
-        "http://127.0.0.1:3000" }, allowCredentials = "true")
+        "http://127.0.0.1:3000", "https://vibely-study-social-website.vercel.app" }, allowCredentials = "true")
 public class AuthController {
 
     @Autowired
@@ -47,57 +49,63 @@ public class AuthController {
     @Autowired
     private JWTService jwtService;
 
-@PostMapping("/send-otp")
-public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
-    String email = request.get("email");
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
 
-    // Kiểm tra email
-    if (email == null || email.isEmpty()) {
-        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
-    }
-
-    try {
-        // Gửi OTP đến email
-        service.sendOtpToEmail(email);  // gọi từ UserService
-        return ResponseEntity.ok(new ApiResponse("success", "Mã xác thực đã được gửi đến email", null));
-    } catch (Exception e) {
-        return ResponseEntity.internalServerError()
-                .body(new ApiResponse("error", "Gửi mã xác thực thất bại", e.getMessage()));
-    }
-}
-@PostMapping("/verify-otp")
-public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> request) {
-    String email = request.get("email");
-    String otp = request.get("otp");
-
-    // Kiểm tra email
-    if (email == null || email.isEmpty()) {
-        return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
-    }
-
-    try {
-        // Xác thực OTP
-        if (service.verifyOtp(email, otp)) {
-            return ResponseEntity.ok(new ApiResponse("success", "Xác thực OTP thành công", null));
-        } else {
-            return ResponseEntity.badRequest().body(new ApiResponse("error", "OTP không hợp lệ hoặc đã hết hạn", null));
+        // Kiểm tra email
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
         }
-    } catch (Exception e) {
-        return ResponseEntity.internalServerError()
-                .body(new ApiResponse("error", "Xác thực OTP thất bại", e.getMessage()));
+
+        try {
+            // Gửi OTP đến email
+            service.sendOtpToEmail(email); // gọi từ UserService
+            return ResponseEntity.ok(new ApiResponse("success", "Mã xác thực đã được gửi đến email", null));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(new ApiResponse("error", "Gửi mã xác thực thất bại", e.getMessage()));
+        }
     }
-}
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String otp = request.get("otp");
+
+        // Kiểm tra email
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+        }
+
+        try {
+            // Xác thực OTP
+            if (service.verifyOtp(email, otp)) {
+                return ResponseEntity.ok(new ApiResponse("success", "Xác thực OTP thành công", null));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error", "OTP không hợp lệ hoặc đã hết hạn", null));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(new ApiResponse("error", "Xác thực OTP thất bại", e.getMessage()));
+        }
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest registerRequest) {
         try {
-
             User user = new User();
             user.setUsername(registerRequest.getUsername());
             user.setEmail(registerRequest.getEmail());
             user.setPassword(registerRequest.getPassword());
             user.setGender(registerRequest.getGender());
             user.setDateOfBirth(registerRequest.getDateOfBirthAsLocalDate());
+
+            // Set createdAt và updatedAt cho user mới
+            LocalDateTime now = LocalDateTime.now();
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
 
             User registeredUser = service.register(user);
 
@@ -171,6 +179,11 @@ public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> re
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2GoogleUser(oauth2User.getAttributes());
 
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
+
             User user = service.processOAuth2User(oauth2UserDetails, Provider.GOOGLE);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
 
@@ -197,6 +210,11 @@ public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> re
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2FacebookUser(oauth2User.getAttributes());
 
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
+
             User user = service.processOAuth2User(oauth2UserDetails, Provider.FACEBOOK);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
 
@@ -222,6 +240,11 @@ public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> re
             }
             OAuth2User oauth2User = authentication.getPrincipal();
             OAuth2UserDetails oauth2UserDetails = new OAuth2GithubUser(oauth2User.getAttributes());
+
+            // Set createdAt và updatedAt cho user OAuth2
+            LocalDateTime now = LocalDateTime.now();
+            oauth2UserDetails.setCreatedAt(now);
+            oauth2UserDetails.setUpdatedAt(now);
 
             User user = service.processOAuth2User(oauth2UserDetails, Provider.GITHUB);
             String token = jwtService.generateToken(user.getId(), user.getEmail());
@@ -274,7 +297,8 @@ public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> re
             String encodedEmail = java.net.URLEncoder.encode(user.getEmail(), "UTF-8");
 
             // Chuyển hướng đến frontend kèm theo token và thông tin người dùng
-            String redirectUrl = String.format("http://localhost:3000?token=%s&userId=%s&email=%s&username=%s",
+            String redirectUrl = String.format(
+                    "https://vibely-study-social-website.vercel.app?token=%s&userId=%s&email=%s&username=%s",
                     encodedToken,
                     user.getId(),
                     encodedEmail,
@@ -285,9 +309,60 @@ public ResponseEntity<ApiResponse> verifyOtp(@RequestBody Map<String, String> re
             response.sendRedirect(redirectUrl);
         } catch (Exception e) {
             log.error("OAuth2 login error: {}", e.getMessage());
-            String errorUrl = "http://localhost:3000/user-login?error=" +
+            String errorUrl = "https://vibely-study-social-website.vercel.app/user-login?error=" +
                     java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
             response.sendRedirect(errorUrl);
+        }
+    }
+
+    @DeleteMapping("/deleteAccount")
+    public ResponseEntity<ApiResponse> deleteAccount(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            service.deleteUserByEmail(email);
+            return ResponseEntity.ok(new ApiResponse("success", "Xóa tài khoản thành công", null));
+        } catch (Exception e) {
+            log.error("Xóa tài khoản thất bại: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Xóa tài khoản thất bại", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = service.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+            // Kiểm tra nếu là tài khoản OAuth
+            if (user.getProvider() != Provider.LOCAL) {
+                String providerName = user.getProvider().toString().toLowerCase();
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error",
+                                String.format("Không thể đổi mật khẩu vì bạn đăng nhập bằng %s", providerName),
+                                null));
+            }
+
+            // Đổi mật khẩu
+            service.changePassword(email, request.getOldPassword(), request.getNewPassword());
+            return ResponseEntity.ok(new ApiResponse("success", "Đổi mật khẩu thành công", null));
+        } catch (RuntimeException e) {
+            // Xử lý các lỗi cụ thể
+            String errorMessage;
+            if (e.getMessage().contains("Mật khẩu cũ không đúng")) {
+                errorMessage = "Mật khẩu cũ không đúng";
+            } else {
+                errorMessage = e.getMessage();
+            }
+            log.error("Đổi mật khẩu thất bại: {}", errorMessage);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", errorMessage, null));
+        } catch (Exception e) {
+            log.error("Đổi mật khẩu thất bại: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Đổi mật khẩu thất bại", e.getMessage()));
         }
     }
 }

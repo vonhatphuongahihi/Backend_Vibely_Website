@@ -1,24 +1,5 @@
 package com.example.vibely_backend.controller;
 
-import com.example.vibely_backend.entity.Post;
-import com.example.vibely_backend.entity.Story;
-import com.example.vibely_backend.entity.User;
-import com.example.vibely_backend.dto.response.PostDTO;
-import com.example.vibely_backend.service.PostService;
-import com.example.vibely_backend.repository.PostRepository;
-import com.example.vibely_backend.repository.StoryRepository;
-import com.example.vibely_backend.repository.UserRepository;
-import com.example.vibely_backend.service.CloudinaryService;
-import com.example.vibely_backend.utils.ResponseHandler;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -26,6 +7,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.vibely_backend.dto.response.PostDTO;
+import com.example.vibely_backend.dto.response.StoryDTO;
+import com.example.vibely_backend.dto.response.UserMiniDTO;
+import com.example.vibely_backend.entity.Post;
+import com.example.vibely_backend.entity.Story;
+import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.repository.PostRepository;
+import com.example.vibely_backend.repository.StoryRepository;
+import com.example.vibely_backend.repository.UserRepository;
+import com.example.vibely_backend.service.CloudinaryService;
+import com.example.vibely_backend.service.PostService;
+import com.example.vibely_backend.service.StoryService;
+import com.example.vibely_backend.utils.ResponseHandler;
 
 @RestController
 @RequestMapping("/users")
@@ -35,6 +48,9 @@ public class PostController {
 
     @Autowired
     private PostService postService;
+
+    @Autowired
+    private StoryService storyService;
 
     @Autowired
     private PostRepository postRepository;
@@ -155,9 +171,11 @@ public class PostController {
             newStory.setUpdatedAt(new Date());
 
             Story savedStory = storyRepository.save(newStory);
-            return ResponseHandler.response(HttpStatus.CREATED, "Tạo story thành công", savedStory);
+            StoryDTO storyDTO = new StoryDTO(savedStory, new UserMiniDTO(user));
+            return ResponseHandler.response(HttpStatus.CREATED, "Tạo story thành công", storyDTO);
 
         } catch (IOException e) {
+            e.printStackTrace();
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Tạo story thất bại", e.getMessage());
         }
     }
@@ -177,23 +195,24 @@ public class PostController {
     @GetMapping("/story")
     public ResponseEntity<?> getAllStories() {
         try {
-            List<Story> stories = storyRepository.findAll();
+            List<StoryDTO> stories = storyService.getAllStories();
             stories.sort((s1, s2) -> s2.getCreatedAt().compareTo(s1.getCreatedAt()));
             return ResponseHandler.response(HttpStatus.OK, "Lấy tất cả story thành công", stories);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Lấy tất cả story thất bại",
                     e.getMessage());
         }
     }
 
     // Lấy bài viết theo ID người dùng
-    @GetMapping("posts/user/{userId}")
-    public ResponseEntity<?> getPostByUserId(@PathVariable String userId) {
+    @GetMapping("/posts/user/{id}")
+    public ResponseEntity<?> getPostByUserId(@PathVariable String id) {
         try {
-            if (userId == null || userId.isEmpty()) {
+            if (id == null || id.isEmpty()) {
                 return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Yêu cầu mã người dùng để lấy bài viết");
             }
-            List<Post> posts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
+            List<PostDTO> posts = postService.getPostsByUserId(id);
             return ResponseHandler.response(HttpStatus.OK, "Lấy bài viết theo ID người dùng thành công", posts);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -247,8 +266,8 @@ public class PostController {
 
             return ResponseHandler.response(HttpStatus.OK, action, responseData);
         } catch (Exception e) {
-            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thích bài viết thất bại",
-                    e.getMessage());
+            e.printStackTrace();
+            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thích bài viết thất bại", e.getMessage());
         }
     }
 
@@ -387,9 +406,11 @@ public class PostController {
 
             story.setUpdatedAt(new Date());
             Story updatedStory = storyRepository.save(story);
-            return ResponseHandler.response(HttpStatus.OK, action, updatedStory);
+            StoryDTO storyDTO = new StoryDTO(updatedStory, new UserMiniDTO(user));
+            return ResponseHandler.response(HttpStatus.OK, action, storyDTO);
 
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thả tym story thất bại", e.getMessage());
         }
     }
