@@ -11,7 +11,8 @@ import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
-
+import com.fasterxml.jackson.annotation.JsonManagedReference; // Import thêm
+import com.fasterxml.jackson.annotation.JsonBackReference;   // Import thêm
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -39,8 +40,11 @@ public class User {
     private String coverPicture;
 
     @DBRef
+    @JsonIgnore
     private List<User> followers = new ArrayList<>();
+
     @DBRef
+    @JsonIgnore
     private List<User> followings = new ArrayList<>();
     @DBRef
     private List<Post> posts = new ArrayList<>();
