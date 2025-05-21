@@ -187,13 +187,13 @@ public class PostController {
     }
 
     // Lấy bài viết theo ID người dùng
-    @GetMapping("posts/user/{id}")
-    public ResponseEntity<?> getPostByUserId(@PathVariable String id) {
+    @GetMapping("posts/user/{userId}")
+    public ResponseEntity<?> getPostByUserId(@PathVariable String userId) {
         try {
-            if (id == null || id.isEmpty()) {
+            if (userId == null || userId.isEmpty()) {
                 return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Yêu cầu mã người dùng để lấy bài viết");
             }
-            List<Post> posts = postRepository.findByUserIdOrderByCreatedAtDesc(id);
+            List<Post> posts = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
             return ResponseHandler.response(HttpStatus.OK, "Lấy bài viết theo ID người dùng thành công", posts);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR,
