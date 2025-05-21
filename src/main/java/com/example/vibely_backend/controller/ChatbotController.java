@@ -62,9 +62,8 @@ public class ChatbotController {
             @RequestBody Map<String, String> request) {
         String question = request.get("question");
         String answer = request.get("answer");
-        String img = request.get("img");
 
-        Chatbot chat = chatbotService.putQuestion(getUserId(), chatId, question, answer, img);
+        Chatbot chat = chatbotService.putQuestion(getUserId(), chatId, question, answer);
         return ResponseEntity.ok(chat);
     }
 
@@ -82,9 +81,9 @@ public class ChatbotController {
                 "message", "Lấy lịch sử chat thành công"));
     }
 
-    @PostMapping("/handleMessage")
-    public ResponseEntity<?> handleMessage(@RequestBody Map<String, String> request) {
-        String message = request.get("message");
+    @PostMapping(value = "/handleMessage", consumes = { MediaType.APPLICATION_JSON_VALUE,
+            MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<?> handleMessage(@RequestParam(required = false) String message) {
         if (message == null || message.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Tin nhắn không được để trống");
         }
