@@ -37,7 +37,7 @@ public class AdminUserController {
             return response;
         }
     }
-
+ 
     @DeleteMapping("/{userId}")
     public Map<String, Object> deleteUser(@PathVariable String userId) {
         Map<String, Object> response = new HashMap<>();
