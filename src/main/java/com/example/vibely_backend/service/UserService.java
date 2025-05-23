@@ -125,10 +125,7 @@ public class UserService {
             throw new RuntimeException("Email là bắt buộc");
         }
 
-        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            log.warn("Username đã tồn tại: {}", user.getUsername());
-            throw new RuntimeException("Username đã tồn tại");
-        }
+        // Chỉ kiểm tra email trùng
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             log.warn("Email đã tồn tại: {}", user.getEmail());
             throw new RuntimeException("Email đã tồn tại");
@@ -141,7 +138,7 @@ public class UserService {
         user.setLikedPosts(new ArrayList<>());
         user.setSavedPosts(new ArrayList<>());
         user.setSavedDocuments(new ArrayList<>());
-        user.setProfilePicture("");
+        user.setProfilePicture("https://res.cloudinary.com/dxdqjj2ww/image/upload/v1747751488/default_weq0sm.png");
         user.setCoverPicture("");
         user.setPostsCount(0);
         user.setFollowerCount(0);
@@ -200,6 +197,10 @@ public class UserService {
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 
     public User updateUserProfile(
