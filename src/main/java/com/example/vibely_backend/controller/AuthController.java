@@ -1,37 +1,42 @@
 package com.example.vibely_backend.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.example.vibely_backend.entity.User;
-import com.example.vibely_backend.service.UserService;
-import com.example.vibely_backend.dto.request.RegisterRequest;
-import com.example.vibely_backend.dto.request.LoginRequest;
-import com.example.vibely_backend.dto.request.ChangePasswordRequest;
-import com.example.vibely_backend.dto.response.ApiResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import com.example.vibely_backend.service.JWTService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
-import com.example.vibely_backend.service.oauth2.OAuth2GoogleUser;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.view.RedirectView;
+
+import com.example.vibely_backend.dto.request.ChangePasswordRequest;
+import com.example.vibely_backend.dto.request.LoginRequest;
+import com.example.vibely_backend.dto.request.RegisterRequest;
+import com.example.vibely_backend.dto.response.ApiResponse;
+import com.example.vibely_backend.entity.Provider;
+import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.service.JWTService;
+import com.example.vibely_backend.service.UserService;
 import com.example.vibely_backend.service.oauth2.OAuth2FacebookUser;
 import com.example.vibely_backend.service.oauth2.OAuth2GithubUser;
-import com.example.vibely_backend.entity.Provider;
-import org.springframework.web.servlet.view.RedirectView;
-import java.io.IOException;
-import java.time.LocalDateTime;
+import com.example.vibely_backend.service.oauth2.OAuth2GoogleUser;
+import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
 
-import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
