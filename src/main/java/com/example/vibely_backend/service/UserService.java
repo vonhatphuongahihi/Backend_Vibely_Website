@@ -1,12 +1,17 @@
 package com.example.vibely_backend.service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +23,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
 
 import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
@@ -34,23 +34,13 @@ import com.example.vibely_backend.dto.response.UserProfileResponse;
 import com.example.vibely_backend.entity.Bio;
 import com.example.vibely_backend.entity.DocumentUser;
 import com.example.vibely_backend.entity.Post;
-import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.entity.Provider;
-import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
-import com.example.vibely_backend.repository.UserRepository;
+import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.BioRepository;
-import com.example.vibely_backend.service.CloudinaryService;
+import com.example.vibely_backend.repository.UserRepository;
+import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
 
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Random;
 
 @Slf4j
 @Service

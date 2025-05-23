@@ -710,12 +710,15 @@ public class PostController {
     @GetMapping("/posts/{postId}")
     public ResponseEntity<?> getSinglePost(@PathVariable String postId) {
         try {
-            Optional<Post> postOpt = postRepository.findById(postId);
-            if (postOpt.isEmpty()) {
+            if (postId == null || postId.isEmpty()) {
+                return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Yêu cầu mã bài viết");
+            }
+
+            PostDTO post = postService.getPostById(postId);
+            if (post == null) {
                 return ResponseHandler.response(HttpStatus.NOT_FOUND, "Không tìm thấy bài viết");
             }
 
-            Post post = postOpt.get();
             return ResponseHandler.response(HttpStatus.OK, "Lấy bài viết thành công", post);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Lấy bài viết thất bại", e.getMessage());

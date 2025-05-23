@@ -25,6 +25,7 @@ public class PostDTO {
     private UserMiniDTO user;
     private List<Reaction> reactions;
     private List<Comment> comments;
+    private ReactionStats reactionStats;
 
     // Constructor to handle both Post and UserMiniDTO
     public PostDTO(Post post, UserMiniDTO userDTO) {
@@ -37,6 +38,14 @@ public class PostDTO {
         this.shareCount = post.getShareCount();
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
+        this.reactionStats = new ReactionStats(
+            post.getReactionStats() != null ? post.getReactionStats().getLike() : 0,
+            post.getReactionStats() != null ? post.getReactionStats().getLove() : 0,
+            post.getReactionStats() != null ? post.getReactionStats().getHaha() : 0,
+            post.getReactionStats() != null ? post.getReactionStats().getWow() : 0,
+            post.getReactionStats() != null ? post.getReactionStats().getSad() : 0,
+            post.getReactionStats() != null ? post.getReactionStats().getAngry() : 0
+        );
 
         // Assign userDTO to the user field
         this.user = userDTO;
