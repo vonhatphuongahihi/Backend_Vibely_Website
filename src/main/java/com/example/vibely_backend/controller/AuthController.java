@@ -49,6 +49,35 @@ public class AuthController {
     @Autowired
     private JWTService jwtService;
 
+    @PostMapping("/check-registration")
+    public ResponseEntity<ApiResponse> checkRegistration(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String username = request.get("username");
+
+        // Kiểm tra email
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+        }
+
+        // Kiểm tra username
+        if (username == null || username.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Tên người dùng không được để trống", null));
+        }
+
+        try {
+            // Chỉ kiểm tra email đã tồn tại
+            if (service.findByEmail(email).isPresent()) {
+                return ResponseEntity.badRequest().body(new ApiResponse("error", "Email đã được sử dụng", null));
+            }
+
+            return ResponseEntity.ok(new ApiResponse("success", "Email và tên người dùng hợp lệ", null));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(new ApiResponse("error", "Lỗi kiểm tra đăng ký", e.getMessage()));
+        }
+    }
+
     @PostMapping("/send-otp")
     public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
         String email = request.get("email");
