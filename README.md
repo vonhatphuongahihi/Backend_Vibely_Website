@@ -14,7 +14,7 @@ This project is part of the "Java Technology" course (IE303), aimed at developin
 |  No.  |         Name         | Student ID |    Role     |
 | :---: | :------------------: | :--------: | :---------: |
 |   1   |    Vo Nhat Phuong    |  22521172  | Team Leader |
-|   2   | Nguyen Thi Nhu Quynh |  22521232  |   Member    |
+|   2   | Ngo Thi Nhu Quynh |  22521232  |   Member    |
 |   3   | Do Luong Phuong Sang |  22521237  |   Member    |
 |   4   |    Hoang Gia Minh    |  22520861  |   Member    |
 

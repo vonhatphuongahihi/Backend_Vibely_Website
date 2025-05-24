@@ -7,10 +7,26 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.vibely_backend.dto.request.BioRequest;
@@ -24,23 +40,6 @@ import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.CloudinaryService;
 import com.example.vibely_backend.service.JWTService;
 import com.example.vibely_backend.service.UserService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Date;
-import java.util.Map;
-import java.util.List;
-
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 
 @RestController
 @RequestMapping("/users")
@@ -134,8 +133,9 @@ public class UserController {
             user.setBio(currentBio);
 
             userRepository.save(user);
+            UserInfoResponse userReponse = userService.convertToUserInfoResponse(user);
 
-            return ResponseEntity.ok(new ApiResponse("success", "Cập nhật hồ sơ thành công", user));
+            return ResponseEntity.ok(new ApiResponse("success", "Cập nhật hồ sơ thành công", userReponse));
 
         } catch (Exception e) {
             logger.error("Lỗi khi cập nhật hồ sơ", e);
@@ -227,19 +227,9 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @GetMapping("/profile")
-    public ResponseEntity<?> getCurrentUserProfile(@RequestHeader("Authorization") String authHeader) {
-        try {
-            String userId = getUserIdFromAuthHeader(authHeader);
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-            UserInfoResponse userResponse = userService.convertToUserInfoResponse(user);
-            return ResponseEntity.ok(new ApiResponse("success", "Lấy thông tin hồ sơ thành công", userResponse));
-        } catch (Exception e) {
-            logger.error("Lỗi khi lấy thông tin hồ sơ", e);
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse("error", "Lỗi khi lấy thông tin hồ sơ", e.getMessage()));
-        }
+    @GetMapping("/profile/{userId}")
+    public ResponseEntity<ApiResponse> getUserProfile(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getUserProfile(userId));
     }
 
     @PostMapping("/get-users")

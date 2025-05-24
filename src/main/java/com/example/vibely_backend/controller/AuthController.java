@@ -1,43 +1,48 @@
 package com.example.vibely_backend.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.example.vibely_backend.entity.User;
-import com.example.vibely_backend.service.UserService;
-import com.example.vibely_backend.dto.request.RegisterRequest;
-import com.example.vibely_backend.dto.request.LoginRequest;
-import com.example.vibely_backend.dto.request.ChangePasswordRequest;
-import com.example.vibely_backend.dto.response.ApiResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import com.example.vibely_backend.service.JWTService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
-import com.example.vibely_backend.service.oauth2.OAuth2GoogleUser;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.view.RedirectView;
+
+import com.example.vibely_backend.dto.request.ChangePasswordRequest;
+import com.example.vibely_backend.dto.request.LoginRequest;
+import com.example.vibely_backend.dto.request.RegisterRequest;
+import com.example.vibely_backend.dto.response.ApiResponse;
+import com.example.vibely_backend.entity.Provider;
+import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.service.JWTService;
+import com.example.vibely_backend.service.UserService;
 import com.example.vibely_backend.service.oauth2.OAuth2FacebookUser;
 import com.example.vibely_backend.service.oauth2.OAuth2GithubUser;
-import com.example.vibely_backend.entity.Provider;
-import org.springframework.web.servlet.view.RedirectView;
-import java.io.IOException;
-import java.time.LocalDateTime;
+import com.example.vibely_backend.service.oauth2.OAuth2GoogleUser;
+import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
 
-import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
-        "http://127.0.0.1:3000", "https://vibely-study-social-website.vercel.app" }, allowCredentials = "true")
+        "http://127.0.0.1:3000" }, allowCredentials = "true")
 public class AuthController {
 
     @Autowired
@@ -48,6 +53,35 @@ public class AuthController {
 
     @Autowired
     private JWTService jwtService;
+
+    @PostMapping("/check-registration")
+    public ResponseEntity<ApiResponse> checkRegistration(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String username = request.get("username");
+
+        // Kiểm tra email
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiResponse("error", "Email không được để trống", null));
+        }
+
+        // Kiểm tra username
+        if (username == null || username.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Tên người dùng không được để trống", null));
+        }
+
+        try {
+            // Chỉ kiểm tra email đã tồn tại
+            if (service.findByEmail(email).isPresent()) {
+                return ResponseEntity.badRequest().body(new ApiResponse("error", "Email đã được sử dụng", null));
+            }
+
+            return ResponseEntity.ok(new ApiResponse("success", "Email và tên người dùng hợp lệ", null));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(new ApiResponse("error", "Lỗi kiểm tra đăng ký", e.getMessage()));
+        }
+    }
 
     @PostMapping("/send-otp")
     public ResponseEntity<ApiResponse> sendOtp(@RequestBody Map<String, String> request) {
@@ -298,7 +332,7 @@ public class AuthController {
 
             // Chuyển hướng đến frontend kèm theo token và thông tin người dùng
             String redirectUrl = String.format(
-                    "https://vibely-study-social-website.vercel.app?token=%s&userId=%s&email=%s&username=%s",
+                    "http://localhost:3000?token=%s&userId=%s&email=%s&username=%s",
                     encodedToken,
                     user.getId(),
                     encodedEmail,
@@ -309,7 +343,7 @@ public class AuthController {
             response.sendRedirect(redirectUrl);
         } catch (Exception e) {
             log.error("OAuth2 login error: {}", e.getMessage());
-            String errorUrl = "https://vibely-study-social-website.vercel.app/user-login?error=" +
+            String errorUrl = "http://localhost:3000/user-login?error=" +
                     java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
             response.sendRedirect(errorUrl);
         }
