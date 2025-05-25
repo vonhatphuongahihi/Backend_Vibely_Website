@@ -2,6 +2,8 @@ package com.example.vibely_backend.service;
 
 import com.example.vibely_backend.entity.Message;
 import com.example.vibely_backend.repository.MessageRepository;
+import com.example.vibely_backend.entity.Conversation;
+import com.example.vibely_backend.repository.ConversationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,8 +15,20 @@ public class MessageService {
     @Autowired
     private MessageRepository messageRepository;
 
+    @Autowired
+    private ConversationRepository conversationRepository;
+
     public Message saveMessage(Message message) {
-        return messageRepository.save(message);
+        Message saved = messageRepository.save(message);
+        // Cập nhật lastMessage và lastMessageTime cho Conversation
+        if (saved.getConversationId() != null) {
+            conversationRepository.findById(saved.getConversationId()).ifPresent(conversation -> {
+                conversation.setLastMessage(saved.getContent());
+                conversation.setLastMessageTime(saved.getCreatedAt());
+                conversationRepository.save(conversation);
+            });
+        }
+        return saved;
     }
 
     public List<Message> findByConversationId(String conversationId) {

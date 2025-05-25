@@ -18,4 +18,6 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
         List<Conversation> conversations = findAllConversationsByTwoMembers(firstUserId, secondUserId);
         return conversations.isEmpty() ? null : conversations.get(0);
     }
+
+    List<Conversation> findByMembersContainingOrderByLastMessageTimeDesc(String userId);
 } 

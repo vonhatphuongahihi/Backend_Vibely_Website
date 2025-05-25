@@ -31,7 +31,7 @@ public class ConversationService {
     }
 
     public List<Conversation> getUserConversations(String userId) {
-        return conversationRepository.findByMembersContaining(userId);
+        return conversationRepository.findByMembersContainingOrderByLastMessageTimeDesc(userId);
     }
 
     public Conversation getConversationBetweenUsers(String firstUserId, String secondUserId) {
