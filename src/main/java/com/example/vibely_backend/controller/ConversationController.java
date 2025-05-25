@@ -2,7 +2,9 @@ package com.example.vibely_backend.controller;
 
 import com.example.vibely_backend.entity.Conversation;
 import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.entity.Message;
 import com.example.vibely_backend.repository.UserRepository;
+import com.example.vibely_backend.repository.MessageRepository;
 import com.example.vibely_backend.service.ConversationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,9 @@ public class ConversationController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private MessageRepository messageRepository;
 
     @PostMapping
     public ResponseEntity<?> createConversation(@RequestBody Map<String, String> request) {
@@ -67,6 +72,17 @@ public class ConversationController {
                     return u;
                 }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
                 map.put("membersData", membersData);
+                // --- Thêm logic unread ---
+                boolean unread = false;
+                List<Message> messages = messageRepository.findByConversationId(conv.getId());
+                if (!messages.isEmpty()) {
+                    Message lastMsg = messages.get(messages.size() - 1);
+                    if (lastMsg.getSenderId() != null && !lastMsg.getSenderId().equals(userId) && !lastMsg.isRead()) {
+                        unread = true;
+                    }
+                }
+                map.put("unread", unread);
+                // --- End logic unread ---
                 result.add(map);
             }
             return ResponseEntity.ok(result);
