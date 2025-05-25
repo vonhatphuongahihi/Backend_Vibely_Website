@@ -66,6 +66,12 @@ public class DataInitializer implements CommandLineRunner {
                 "how-to-posts",
                 Arrays.asList("create-posts", "share-posts"));
 
+        chatbotService.addTrainingData(
+                "Làm sao để học hiệu quả hơn trên Vibely?",
+                "Bạn có thể học hiệu quả hơn bằng cách: 1) Đặt mục tiêu nhỏ mỗi ngày, 2) Sử dụng tính năng Schedule để nhắc nhở học tập, 3) Chia sẻ tiến trình để có động lực từ bạn bè.",
+                "tips-effective-learning",
+                Arrays.asList("learning-tips", "productivity"));
+                
         // Thêm dữ liệu về Story
         chatbotService.addTrainingData(
                 "Story là gì?",
@@ -116,6 +122,12 @@ public class DataInitializer implements CommandLineRunner {
                 Arrays.asList("chatbot-privacy", "data-protection"));
 
         chatbotService.addTrainingData(
+                "Vibely có bảo vệ thông tin người dùng không?",
+                "Có, Vibely cam kết bảo mật dữ liệu người dùng. Chúng tôi mã hóa thông tin và tuân thủ các quy định về bảo vệ dữ liệu cá nhân.",
+                "data-security",
+                Arrays.asList("user-data-security", "privacy-policy"));
+
+        chatbotService.addTrainingData(
                 "Làm sao để bảo vệ thông tin cá nhân?",
                 "Để bảo vệ thông tin cá nhân: 1) Không chia sẻ mật khẩu, 2) Cài đặt quyền riêng tư cho bài viết, 3) Chỉ kết bạn với người quen, 4) Báo cáo nếu thấy thông tin bị lộ.",
                 "privacy-protection",
@@ -141,5 +153,57 @@ public class DataInitializer implements CommandLineRunner {
                 "Inquiry là tính năng cho phép bạn đặt câu hỏi về bài học. Bạn có thể đặt câu hỏi công khai để nhận sự giúp đỡ từ cộng đồng, hoặc gửi câu hỏi riêng cho giáo viên.",
                 "feature-inquiry",
                 Arrays.asList("question-asking", "help-requests"));
+                
+        // Thêm dữ liệu về hỗ trợ kỹ thuật
+        chatbotService.addTrainingData(
+                "Tôi không nhận được mã xác thực email?",
+                "Hãy kiểm tra trong thư mục Spam hoặc Quảng cáo. Nếu vẫn không thấy, bạn có thể nhấn nút 'Gửi lại mã xác thực' trong phần đăng ký hoặc đăng nhập.",
+                "email-verification-issue",
+                Arrays.asList("verify-email", "email-code-not-received"));
+
+        // Thêm dữ liệu về tài khoản
+        chatbotService.addTrainingData(
+                "Làm sao để đổi mật khẩu?",
+                "Bạn có thể đổi mật khẩu bằng cách: 1) Vào phần 'Cài đặt tài khoản', 2) Chọn 'Đổi mật khẩu', 3) Nhập mật khẩu cũ và mật khẩu mới, 4) Nhấn 'Lưu thay đổi'.",
+                "account-change-password",
+                Arrays.asList("change-password", "reset-password"));
+
+        chatbotService.addTrainingData(
+                "Tôi có thể xóa tài khoản không?",
+                "Có, bạn có thể xóa tài khoản bằng cách gửi yêu cầu trong phần 'Cài đặt tài khoản' -> 'Xóa tài khoản'. Lưu ý: Sau khi xóa, toàn bộ dữ liệu sẽ bị mất vĩnh viễn.",
+                "account-delete",
+                Arrays.asList("delete-account", "remove-account"));
+
+        // Thêm dữ liệu về mẹo học tập
+        chatbotService.addTrainingData(
+                "Làm sao để học hiệu quả hơn?",
+                "Một số mẹo học tập hiệu quả: 1) Đặt mục tiêu nhỏ hàng ngày, 2) Dùng kỹ thuật Pomodoro, 3) Tự kiểm tra bằng quiz, 4) Tham gia nhóm học tập, 5) Sử dụng Learning Tree để theo dõi tiến độ.",
+                "tips-effective-learning",
+                Arrays.asList("learning-tips", "study-hacks"));
+
+        chatbotService.addTrainingData(
+                "Làm sao để ôn tập trước kỳ thi?",
+                "Để ôn thi hiệu quả: 1) Tạo kế hoạch ôn tập bằng Schedule, 2) Làm quiz nhiều lần, 3) Xem lại tài liệu trong Document, 4) Hỏi đáp trong Inquiry, 5) Tập trung vào các mục tiêu Learning Goals.",
+                "tips-exam-prep",
+                Arrays.asList("exam-preparation", "study-for-tests"));
+
+        // Thêm dữ liệu về phản hồi
+        chatbotService.addTrainingData(
+                "Tôi muốn góp ý cho ứng dụng thì gửi ở đâu?",
+                "Bạn có thể gửi phản hồi trực tiếp qua mục 'Góp ý' trong phần Cài đặt, hoặc gửi email đến feedback@vibely.com.",
+                "feedback-suggestions",
+                Arrays.asList("app-feedback", "send-suggestions"));
+        
+        // Thêm dữ liệu cho người mới bắt đầu
+        chatbotService.addTrainingData(
+                "Tôi mới dùng Vibely, nên bắt đầu từ đâu?",
+                "Bạn có thể bắt đầu bằng cách: 1) Cập nhật hồ sơ cá nhân, 2) Thêm các môn học (Subject), 3) Đặt mục tiêu đầu tiên trong Learning Goals, 4) Khám phá bài viết và nhóm học tập.",
+                "onboarding-new-users",
+                Arrays.asList("getting-started", "new-user-guide"));
+        chatbotService.addTrainingData(
+                "Làm sao để kết nối với bạn bè?",
+                "Để kết nối với bạn bè: 1) Tìm kiếm tên người dùng, 2) Gửi yêu cầu kết bạn, 3) Sau khi chấp nhận, bạn có thể nhắn tin, mời vào nhóm học, hoặc cùng đặt mục tiêu chung.",
+                "social-connect",
+                Arrays.asList("add-friends", "make-connections"));
     }
 }
