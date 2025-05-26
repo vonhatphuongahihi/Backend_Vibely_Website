@@ -1,0 +1,304 @@
+package com.example.vibely_backend.service;
+
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.util.DateTime;
+import com.google.api.client.util.store.FileDataStoreFactory;
+import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.CalendarScopes;
+import com.google.api.services.calendar.model.Event;
+import com.google.api.services.calendar.model.EventDateTime;
+import com.example.vibely_backend.entity.Schedule;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
+import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.security.GeneralSecurityException;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.List;
+import java.io.File;
+
+@Slf4j
+@Service
+public class GoogleCalendarService {
+    private static final String APPLICATION_NAME = "Vibely Calendar Integration";
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+    private static final String TOKENS_DIRECTORY_PATH = "tokens";
+    private static final List<String> SCOPES = Arrays.asList(
+            CalendarScopes.CALENDAR,
+            CalendarScopes.CALENDAR_EVENTS);
+    private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String clientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    private String clientSecret;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
+
+    private Calendar getCalendarService() throws IOException, GeneralSecurityException {
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        return new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+    }
+
+    private Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
+        log.info("Bắt đầu quá trình xác thực Google Calendar");
+        log.info("Client ID: {}", clientId);
+        log.info("Client Secret: {}", clientSecret);
+
+        // Tạo GoogleClientSecrets từ client ID và secret đã cấu hình
+        GoogleClientSecrets clientSecrets = new GoogleClientSecrets();
+        GoogleClientSecrets.Details web = new GoogleClientSecrets.Details();
+        web.setClientId(clientId);
+        web.setClientSecret(clientSecret);
+        web.setAuthUri("https://accounts.google.com/o/oauth2/auth");
+        web.setTokenUri("https://oauth2.googleapis.com/token");
+        clientSecrets.setWeb(web);
+        log.info("Đã tạo GoogleClientSecrets với client ID: {}", clientId);
+
+        // Tạo thư mục tokens nếu chưa tồn tại
+        java.io.File tokensDir = new java.io.File(TOKENS_DIRECTORY_PATH);
+        log.info("Đang tạo thư mục tokens tại: {}", tokensDir.getAbsolutePath());
+
+        if (!tokensDir.exists()) {
+            boolean created = tokensDir.mkdirs();
+            if (created) {
+                log.info("Đã tạo thư mục tokens thành công");
+            } else {
+                log.error("Không thể tạo thư mục tokens");
+                throw new RuntimeException("Không thể tạo thư mục tokens. Vui lòng kiểm tra quyền truy cập.");
+            }
+        } else {
+            log.info("Thư mục tokens đã tồn tại");
+            // Kiểm tra nội dung thư mục tokens
+            File[] files = tokensDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    log.info("File trong thư mục tokens: {}", file.getName());
+                }
+            }
+        }
+
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+                .setDataStoreFactory(new FileDataStoreFactory(tokensDir))
+                .setAccessType("offline")
+                .build();
+        log.info("Đã tạo GoogleAuthorizationCodeFlow");
+
+        // Sử dụng redirect URI từ frontend
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder()
+                .setPort(8888)
+                .setCallbackPath("/oauth2callback")
+                .build();
+        log.info("Đã tạo LocalServerReceiver với port 8888");
+
+        try {
+            log.info("Bắt đầu quá trình xác thực người dùng");
+            Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+            log.info("Xác thực thành công, đã nhận được credential");
+            log.info("Access Token: {}", credential.getAccessToken());
+            log.info("Refresh Token: {}", credential.getRefreshToken());
+            return credential;
+        } catch (Exception e) {
+            log.error("Lỗi xác thực Google Calendar: {}", e.getMessage(), e);
+            throw new RuntimeException("Không thể xác thực với Google Calendar. Vui lòng thử lại.", e);
+        }
+    }
+
+    public Event createGoogleCalendarEvent(Schedule schedule) {
+        try {
+            log.info("Bắt đầu tạo sự kiện Google Calendar cho lịch: {}", schedule.getSubject());
+            Calendar service = getCalendarService();
+
+            Event event = new Event()
+                    .setSummary(schedule.getSubject());
+
+            // Chuyển đổi mã màu hex sang colorId của Google Calendar
+            String colorId = convertHexToGoogleColorId(schedule.getCategoryColor());
+            if (colorId != null) {
+                event.setColorId(colorId);
+            }
+
+            // Chuyển đổi LocalDateTime sang DateTime của Google Calendar
+            DateTime startDateTime = new DateTime(schedule.getStartTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli());
+            DateTime endDateTime = new DateTime(schedule.getEndTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli());
+
+            log.info("Thời gian bắt đầu: {}", startDateTime);
+            log.info("Thời gian kết thúc: {}", endDateTime);
+
+            EventDateTime start = new EventDateTime()
+                    .setDateTime(startDateTime)
+                    .setTimeZone(ZoneId.systemDefault().getId());
+            EventDateTime end = new EventDateTime()
+                    .setDateTime(endDateTime)
+                    .setTimeZone(ZoneId.systemDefault().getId());
+
+            event.setStart(start);
+            event.setEnd(end);
+
+            log.info("Đang gửi yêu cầu tạo sự kiện lên Google Calendar");
+            Event createdEvent = service.events().insert("primary", event).execute();
+            log.info("Đã tạo sự kiện thành công với ID: {}", createdEvent.getId());
+            log.info("Link sự kiện: {}", createdEvent.getHtmlLink());
+            return createdEvent;
+        } catch (Exception e) {
+            log.error("Lỗi khi tạo sự kiện Google Calendar: {}", e.getMessage(), e);
+            throw new RuntimeException("Không thể tạo sự kiện trên Google Calendar. Vui lòng kiểm tra quyền truy cập.",
+                    e);
+        }
+    }
+
+    private String convertHexToGoogleColorId(String hexColor) {
+        if (hexColor == null || hexColor.isEmpty()) {
+            return null;
+        }
+        // Bỏ dấu # nếu có
+        hexColor = hexColor.replace("#", "");
+        // Map các mã màu hex sang colorId của Google Calendar
+        switch (hexColor.toUpperCase()) {
+            case "0000FF": // Blue
+                return "1";
+            case "00FF00": // Green
+                return "2";
+            case "FF0000": // Red
+                return "3";
+            case "FFFF00": // Yellow
+                return "4";
+            case "FF00FF": // Purple
+                return "5";
+            case "00FFFF": // Cyan
+                return "6";
+            case "FF8000": // Orange
+                return "7";
+            case "800080": // Purple
+                return "8";
+            case "008000": // Green
+                return "9";
+            case "800000": // Red
+                return "10";
+            case "000080": // Blue
+                return "11";
+            default:
+                log.warn("Mã màu không hợp lệ: {}, sử dụng màu mặc định", hexColor);
+                return "1"; // Mặc định là màu xanh dương
+        }
+    }
+
+    public void deleteGoogleCalendarEvent(String eventId) {
+        try {
+            Calendar service = getCalendarService();
+            service.events().delete("primary", eventId).execute();
+        } catch (Exception e) {
+            log.error("Lỗi khi xóa sự kiện Google Calendar: {}", e.getMessage());
+            throw new RuntimeException("Không thể xóa sự kiện trên Google Calendar. Vui lòng kiểm tra quyền truy cập.",
+                    e);
+        }
+    }
+
+    public Event updateGoogleCalendarEvent(String eventId, Schedule schedule) {
+        try {
+            Calendar service = getCalendarService();
+
+            Event event = service.events().get("primary", eventId).execute();
+
+            event.setSummary(schedule.getSubject())
+                    .setColorId(schedule.getCategoryColor());
+
+            DateTime startDateTime = new DateTime(schedule.getStartTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli());
+            DateTime endDateTime = new DateTime(schedule.getEndTime()
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli());
+
+            EventDateTime start = new EventDateTime()
+                    .setDateTime(startDateTime)
+                    .setTimeZone(ZoneId.systemDefault().getId());
+            EventDateTime end = new EventDateTime()
+                    .setDateTime(endDateTime)
+                    .setTimeZone(ZoneId.systemDefault().getId());
+
+            event.setStart(start);
+            event.setEnd(end);
+
+            return service.events().update("primary", eventId, event).execute();
+        } catch (Exception e) {
+            log.error("Lỗi khi cập nhật sự kiện Google Calendar: {}", e.getMessage());
+            throw new RuntimeException(
+                    "Không thể cập nhật sự kiện trên Google Calendar. Vui lòng kiểm tra quyền truy cập.", e);
+        }
+    }
+
+    public String buildAuthUrl() throws Exception {
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        GoogleClientSecrets clientSecrets = new GoogleClientSecrets();
+        GoogleClientSecrets.Details web = new GoogleClientSecrets.Details();
+        web.setClientId(clientId);
+        web.setClientSecret(clientSecret);
+        web.setAuthUri("https://accounts.google.com/o/oauth2/auth");
+        web.setTokenUri("https://oauth2.googleapis.com/token");
+        clientSecrets.setWeb(web);
+
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+                .setAccessType("offline")
+                .build();
+
+        // Đảm bảo redirect URI trùng với URI đã đăng ký trên Google Cloud
+        String redirectUri = "http://localhost:8081/google-calendar/oauth2callback";
+        return flow.newAuthorizationUrl()
+                .setRedirectUri(redirectUri)
+                .setAccessType("offline")
+                .build();
+    }
+
+    public void handleAuthCallback(String code) throws Exception {
+        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        GoogleClientSecrets clientSecrets = new GoogleClientSecrets();
+        GoogleClientSecrets.Details web = new GoogleClientSecrets.Details();
+        web.setClientId(clientId);
+        web.setClientSecret(clientSecret);
+        web.setAuthUri("https://accounts.google.com/o/oauth2/auth");
+        web.setTokenUri("https://oauth2.googleapis.com/token");
+        clientSecrets.setWeb(web);
+
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+                .setAccessType("offline")
+                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
+                .build();
+
+        String redirectUri = "http://localhost:8081/google-calendar/oauth2callback";
+        GoogleTokenResponse tokenResponse = flow.newTokenRequest(code)
+                .setRedirectUri(redirectUri)
+                .execute();
+
+        flow.createAndStoreCredential(tokenResponse, "user");
+    }
+}
