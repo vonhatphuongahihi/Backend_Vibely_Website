@@ -33,4 +33,4 @@ public class CloudinaryProperties {
     public void setApiSecret(String apiSecret) {
         this.apiSecret = apiSecret;
     }
-} 
+}

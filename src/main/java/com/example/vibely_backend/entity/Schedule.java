@@ -34,6 +34,9 @@ public class Schedule {
     @Field("categoryColor")
     private String categoryColor = "#0000FF";
 
+    @Field("googleCalendarEventId")
+    private String googleCalendarEventId;
+
     @CreatedDate
     @Field("createdAt")
     private LocalDateTime createdAt;

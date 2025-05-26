@@ -3,6 +3,7 @@ package com.example.vibely_backend.service;
 import com.example.vibely_backend.dto.request.ScheduleRequest;
 import com.example.vibely_backend.entity.Schedule;
 import com.example.vibely_backend.repository.ScheduleRepository;
+import com.example.vibely_backend.service.GoogleCalendarService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.time.ZoneId;
 @RequiredArgsConstructor
 public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
+    private final GoogleCalendarService googleCalendarService;
     private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     public Schedule createSchedule(String userId, ScheduleRequest request) {
@@ -37,7 +39,24 @@ public class ScheduleService {
         schedule.setEndTime(endTime);
         schedule.setCategoryColor(request.getCategoryColor() != null ? request.getCategoryColor() : "#0000FF");
 
-        return scheduleRepository.save(schedule);
+        // Lưu vào database
+        log.info("Đang lưu lịch vào database");
+        Schedule savedSchedule = scheduleRepository.save(schedule);
+        log.info("Đã lưu lịch vào database với ID: {}", savedSchedule.getId());
+
+        try {
+            // Tạo sự kiện trên Google Calendar
+            log.info("Bắt đầu tạo sự kiện trên Google Calendar");
+            var googleEvent = googleCalendarService.createGoogleCalendarEvent(savedSchedule);
+            // Lưu ID của sự kiện Google Calendar
+            savedSchedule.setGoogleCalendarEventId(googleEvent.getId());
+            log.info("Đã tạo sự kiện Google Calendar với ID: {}", googleEvent.getId());
+            return scheduleRepository.save(savedSchedule);
+        } catch (Exception e) {
+            log.error("Lỗi khi tạo sự kiện Google Calendar: {}", e.getMessage(), e);
+            // Không throw exception để không ảnh hưởng đến việc lưu schedule
+            return savedSchedule;
+        }
     }
 
     public List<Schedule> getUserSchedules(String userId) {
@@ -66,11 +85,35 @@ public class ScheduleService {
         schedule.setEndTime(endTime);
         schedule.setCategoryColor(request.getCategoryColor());
 
-        return scheduleRepository.save(schedule);
+        Schedule updatedSchedule = scheduleRepository.save(schedule);
+
+        try {
+            if (schedule.getGoogleCalendarEventId() != null) {
+                googleCalendarService.updateGoogleCalendarEvent(schedule.getGoogleCalendarEventId(), updatedSchedule);
+            } else {
+                var googleEvent = googleCalendarService.createGoogleCalendarEvent(updatedSchedule);
+                updatedSchedule.setGoogleCalendarEventId(googleEvent.getId());
+                scheduleRepository.save(updatedSchedule);
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi cập nhật sự kiện Google Calendar: {}", e.getMessage(), e);
+        }
+        return updatedSchedule;
     }
 
     public void deleteSchedule(String userId, String scheduleId) {
-        log.info("Deleting schedule {} for user: {}", scheduleId, userId);
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Lịch trình không tồn tại"));
+        if (!schedule.getUserId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền xóa lịch này");
+        }
+        try {
+            if (schedule.getGoogleCalendarEventId() != null) {
+                googleCalendarService.deleteGoogleCalendarEvent(schedule.getGoogleCalendarEventId());
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi xóa sự kiện Google Calendar: {}", e.getMessage(), e);
+        }
         scheduleRepository.deleteByIdAndUserId(scheduleId, userId);
     }
 
