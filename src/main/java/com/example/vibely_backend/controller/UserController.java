@@ -3,6 +3,7 @@ package com.example.vibely_backend.controller;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -264,5 +265,53 @@ public class UserController {
     @DeleteMapping("/saved/{id}")
     public ResponseEntity<ApiResponse> unsaveDocument(@PathVariable String id) {
         return ResponseEntity.ok(userService.unsaveDocument(id));
+    }
+
+    // Google Calendar endpoints
+    @PostMapping("/google-calendar/connect")
+    public ResponseEntity<ApiResponse> connectGoogleCalendar(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> tokens) {
+        try {
+            String userId = getUserIdFromAuthHeader(authHeader);
+            String accessToken = tokens.get("accessToken");
+            String refreshToken = tokens.get("refreshToken");
+            LocalDateTime expiry = LocalDateTime.parse(tokens.get("expiry"));
+
+            userService.saveGoogleCalendarTokens(userId, accessToken, refreshToken, expiry);
+            return ResponseEntity.ok(new ApiResponse("success", "Google Calendar connected successfully", null));
+        } catch (Exception e) {
+            logger.error("Error connecting Google Calendar", e);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Failed to connect Google Calendar", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/google-calendar/disconnect")
+    public ResponseEntity<ApiResponse> disconnectGoogleCalendar(
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = getUserIdFromAuthHeader(authHeader);
+            userService.disconnectGoogleCalendar(userId);
+            return ResponseEntity.ok(new ApiResponse("success", "Google Calendar disconnected successfully", null));
+        } catch (Exception e) {
+            logger.error("Error disconnecting Google Calendar", e);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Failed to disconnect Google Calendar", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/google-calendar/status")
+    public ResponseEntity<ApiResponse> getGoogleCalendarStatus(
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = getUserIdFromAuthHeader(authHeader);
+            boolean isConnected = userService.isGoogleCalendarConnected(userId);
+            return ResponseEntity.ok(new ApiResponse("success", "Google Calendar status retrieved", isConnected));
+        } catch (Exception e) {
+            logger.error("Error getting Google Calendar status", e);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Failed to get Google Calendar status", e.getMessage()));
+        }
     }
 }

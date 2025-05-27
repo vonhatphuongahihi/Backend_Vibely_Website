@@ -728,4 +728,52 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Google Calendar methods
+    public void saveGoogleCalendarTokens(String userId, String accessToken, String refreshToken, LocalDateTime expiry) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        user.setGoogleCalendarAccessToken(accessToken);
+        user.setGoogleCalendarRefreshToken(refreshToken);
+        user.setGoogleCalendarTokenExpiry(expiry);
+        user.setGoogleCalendarConnected(true);
+
+        userRepository.save(user);
+    }
+
+    public void disconnectGoogleCalendar(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        user.setGoogleCalendarAccessToken(null);
+        user.setGoogleCalendarRefreshToken(null);
+        user.setGoogleCalendarTokenExpiry(null);
+        user.setGoogleCalendarConnected(false);
+
+        userRepository.save(user);
+    }
+
+    public boolean isGoogleCalendarConnected(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        return user.isGoogleCalendarConnected();
+    }
+
+    public String getGoogleCalendarAccessToken(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        return user.getGoogleCalendarAccessToken();
+    }
+
+    public String getGoogleCalendarRefreshToken(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        return user.getGoogleCalendarRefreshToken();
+    }
+
+    public LocalDateTime getGoogleCalendarTokenExpiry(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        return user.getGoogleCalendarTokenExpiry();
+    }
 }
