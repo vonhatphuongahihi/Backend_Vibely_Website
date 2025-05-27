@@ -56,7 +56,9 @@ public class SecurityConfig {
                                                                 "/forgot-password/**",
                                                                 "/oauth2/**", "/login/**", "/schedules/**", "/users/**",
                                                                 "/quotations/**", "/quizzes/**", "/learning-trees/**",
-                                                                "/learning-goals/**", "/chatbot/**")
+                                                                "/learning-goals/**", "/chatbot/**",
+                                                                "/google-calendar/auth-url",
+                                                                "/google-calendar/oauth2callback")
                                                 .permitAll()
                                                 .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                                                 .anyRequest().authenticated())

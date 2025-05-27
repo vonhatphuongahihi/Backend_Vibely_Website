@@ -12,7 +12,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import com.fasterxml.jackson.annotation.JsonManagedReference; // Import thêm
-import com.fasterxml.jackson.annotation.JsonBackReference;   // Import thêm
+import com.fasterxml.jackson.annotation.JsonBackReference; // Import thêm
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -71,6 +71,12 @@ public class User {
     private boolean enabled = true;
     private Provider provider = Provider.LOCAL;
     private String role = "ROLE_USER";
+
+    // Google Calendar fields
+    private String googleCalendarAccessToken;
+    private String googleCalendarRefreshToken;
+    private LocalDateTime googleCalendarTokenExpiry;
+    private boolean googleCalendarConnected = false;
 
     @CreatedDate
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")

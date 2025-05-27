@@ -27,9 +27,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.io.File;
+import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Service
@@ -131,34 +133,39 @@ public class GoogleCalendarService {
             Event event = new Event()
                     .setSummary(schedule.getSubject());
 
+            // Format thời gian theo chuẩn RFC3339 với timezone
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+            ZoneId zoneId = ZoneId.of("Asia/Ho_Chi_Minh");
+
+            // Trừ 5 tiếng và format lại
+            String startTimeStr = schedule.getStartTime()
+                    .minusHours(5)
+                    .atZone(zoneId)
+                    .format(formatter);
+            String endTimeStr = schedule.getEndTime()
+                    .minusHours(5)
+                    .atZone(zoneId)
+                    .format(formatter);
+
+            DateTime startDateTime = new DateTime(startTimeStr);
+            DateTime endDateTime = new DateTime(endTimeStr);
+
+            log.info("Thời gian bắt đầu: {}", startDateTime);
+            log.info("Thời gian kết thúc: {}", endDateTime);
+
+            // Set timezone cho event
+            event.setStart(new EventDateTime()
+                    .setDateTime(startDateTime)
+                    .setTimeZone("Asia/Ho_Chi_Minh"));
+            event.setEnd(new EventDateTime()
+                    .setDateTime(endDateTime)
+                    .setTimeZone("Asia/Ho_Chi_Minh"));
+
             // Chuyển đổi mã màu hex sang colorId của Google Calendar
             String colorId = convertHexToGoogleColorId(schedule.getCategoryColor());
             if (colorId != null) {
                 event.setColorId(colorId);
             }
-
-            // Chuyển đổi LocalDateTime sang DateTime của Google Calendar
-            DateTime startDateTime = new DateTime(schedule.getStartTime()
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli());
-            DateTime endDateTime = new DateTime(schedule.getEndTime()
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli());
-
-            log.info("Thời gian bắt đầu: {}", startDateTime);
-            log.info("Thời gian kết thúc: {}", endDateTime);
-
-            EventDateTime start = new EventDateTime()
-                    .setDateTime(startDateTime)
-                    .setTimeZone(ZoneId.systemDefault().getId());
-            EventDateTime end = new EventDateTime()
-                    .setDateTime(endDateTime)
-                    .setTimeZone(ZoneId.systemDefault().getId());
-
-            event.setStart(start);
-            event.setEnd(end);
 
             log.info("Đang gửi yêu cầu tạo sự kiện lên Google Calendar");
             Event createdEvent = service.events().insert("primary", event).execute();
@@ -222,30 +229,35 @@ public class GoogleCalendarService {
     public Event updateGoogleCalendarEvent(String eventId, Schedule schedule) {
         try {
             Calendar service = getCalendarService();
-
             Event event = service.events().get("primary", eventId).execute();
 
             event.setSummary(schedule.getSubject())
                     .setColorId(schedule.getCategoryColor());
 
-            DateTime startDateTime = new DateTime(schedule.getStartTime()
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli());
-            DateTime endDateTime = new DateTime(schedule.getEndTime()
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli());
+            // Format thời gian theo chuẩn RFC3339 với timezone
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+            ZoneId zoneId = ZoneId.of("Asia/Ho_Chi_Minh");
 
-            EventDateTime start = new EventDateTime()
+            // Trừ 5 tiếng và format lại
+            String startTimeStr = schedule.getStartTime()
+                    .minusHours(5)
+                    .atZone(zoneId)
+                    .format(formatter);
+            String endTimeStr = schedule.getEndTime()
+                    .minusHours(5)
+                    .atZone(zoneId)
+                    .format(formatter);
+
+            DateTime startDateTime = new DateTime(startTimeStr);
+            DateTime endDateTime = new DateTime(endTimeStr);
+
+            // Set timezone cho event
+            event.setStart(new EventDateTime()
                     .setDateTime(startDateTime)
-                    .setTimeZone(ZoneId.systemDefault().getId());
-            EventDateTime end = new EventDateTime()
+                    .setTimeZone("Asia/Ho_Chi_Minh"));
+            event.setEnd(new EventDateTime()
                     .setDateTime(endDateTime)
-                    .setTimeZone(ZoneId.systemDefault().getId());
-
-            event.setStart(start);
-            event.setEnd(end);
+                    .setTimeZone("Asia/Ho_Chi_Minh"));
 
             return service.events().update("primary", eventId, event).execute();
         } catch (Exception e) {
