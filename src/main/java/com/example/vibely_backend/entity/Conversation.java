@@ -15,6 +15,8 @@ public class Conversation {
     private List<String> members = new ArrayList<>();
     private Map<String, String> nicknames = new HashMap<>();
     private String color;
+    private String lastMessage;
+    private java.util.Date lastMessageTime;
 
     // Constructors
     public Conversation() {}
@@ -54,5 +56,21 @@ public class Conversation {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public String getLastMessage() {
+        return lastMessage;
+    }
+
+    public void setLastMessage(String lastMessage) {
+        this.lastMessage = lastMessage;
+    }
+
+    public java.util.Date getLastMessageTime() {
+        return lastMessageTime;
+    }
+
+    public void setLastMessageTime(java.util.Date lastMessageTime) {
+        this.lastMessageTime = lastMessageTime;
     }
 }

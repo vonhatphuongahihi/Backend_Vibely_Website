@@ -1,13 +1,20 @@
 package com.example.vibely_backend.controller;
 
 import com.example.vibely_backend.entity.Conversation;
+import com.example.vibely_backend.entity.User;
+import com.example.vibely_backend.entity.Message;
+import com.example.vibely_backend.repository.UserRepository;
+import com.example.vibely_backend.repository.MessageRepository;
 import com.example.vibely_backend.service.ConversationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/conversations")
@@ -15,6 +22,12 @@ public class ConversationController {
 
     @Autowired
     private ConversationService conversationService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private MessageRepository messageRepository;
 
     @PostMapping
     public ResponseEntity<?> createConversation(@RequestBody Map<String, String> request) {
@@ -39,9 +52,40 @@ public class ConversationController {
             if (userId == null) {
                 return ResponseEntity.badRequest().body("Thiếu userId");
             }
-
             List<Conversation> conversations = conversationService.getUserConversations(userId);
-            return ResponseEntity.ok(conversations);
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (Conversation conv : conversations) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", conv.getId());
+                map.put("members", conv.getMembers());
+                map.put("lastMessage", conv.getLastMessage());
+                map.put("lastMessageTime", conv.getLastMessageTime());
+                map.put("color", conv.getColor());
+                // Lấy thông tin user cho từng member
+                List<Map<String, Object>> membersData = conv.getMembers().stream().map(memberId -> {
+                    User user = userRepository.findById(memberId).orElse(null);
+                    if (user == null) return null;
+                    Map<String, Object> u = new HashMap<>();
+                    u.put("id", user.getId());
+                    u.put("username", user.getUsername());
+                    u.put("profilePicture", user.getProfilePicture());
+                    return u;
+                }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
+                map.put("membersData", membersData);
+                // --- Thêm logic unread ---
+                boolean unread = false;
+                List<Message> messages = messageRepository.findByConversationId(conv.getId());
+                if (!messages.isEmpty()) {
+                    Message lastMsg = messages.get(messages.size() - 1);
+                    if (lastMsg.getSenderId() != null && !lastMsg.getSenderId().equals(userId) && !lastMsg.isRead()) {
+                        unread = true;
+                    }
+                }
+                map.put("unread", unread);
+                // --- End logic unread ---
+                result.add(map);
+            }
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Lỗi server: " + e.getMessage());
         }
