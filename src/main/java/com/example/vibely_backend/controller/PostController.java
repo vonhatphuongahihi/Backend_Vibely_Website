@@ -727,8 +727,18 @@ public class PostController {
 
     // Chỉnh sửa bài viết
     @PutMapping("/posts/edit/{postId}")
-    public ResponseEntity<?> editPost(@PathVariable String postId, @RequestBody Post updatedPost) {
-        System.out.println("====ResponseEntityResponseEntityResponseEntity=====: " + postId);
+    public ResponseEntity<?> editPost(
+            @PathVariable String postId, 
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false) MultipartFile file,
+            @RequestParam(required = false, defaultValue = "false") boolean removeMedia) {
+        System.out.println("====Edit Post Request=====");
+        System.out.println("PostId: " + postId);
+        System.out.println("Content: " + content);
+        System.out.println("File: " + (file != null ? file.getOriginalFilename() : "null"));
+        System.out.println("File size: " + (file != null ? file.getSize() : "null"));
+        System.out.println("Remove Media: " + removeMedia);
+        
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = authentication.getName();
@@ -736,27 +746,107 @@ public class PostController {
             User user = userRepository.findByEmail(userEmail)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-
             Optional<Post> postOpt = postRepository.findById(postId);
             if (postOpt.isEmpty()) {
                 return ResponseHandler.response(HttpStatus.NOT_FOUND, "Không tìm thấy bài viết");
             }
 
             Post existingPost = postOpt.get();
+            System.out.println("====Existing Post Media URL BEFORE=====: " + existingPost.getMediaUrl());
+            System.out.println("====Existing Post Media Type BEFORE=====: " + existingPost.getMediaType());
 
             // Kiểm tra xem người dùng có phải là chủ bài viết không
             if (!existingPost.getUser().getId().equals(user.getId())) {
                 return ResponseHandler.response(HttpStatus.FORBIDDEN, "Bạn không có quyền chỉnh sửa bài viết này");
             }
 
-            // Cập nhật nội dung bài viết
-            existingPost.setContent(updatedPost.getContent());
-            existingPost.setUpdatedAt(new Date());
+            // Cập nhật nội dung text nếu có
+            if (content != null) {
+                System.out.println("====Updating content=====");
+                existingPost.setContent(content);
+            }
 
+            // Xử lý media
+            if (removeMedia) {
+                System.out.println("====Removing media=====");
+                // Xóa media hiện tại
+                if (existingPost.getMediaUrl() != null) {
+                    try {
+                        // Có thể thêm logic xóa file trên Cloudinary nếu cần
+                        // cloudinaryService.deleteFile(existingPost.getMediaUrl());
+                    } catch (Exception e) {
+                        System.out.println("Warning: Could not delete old media file: " + e.getMessage());
+                    }
+                }
+                existingPost.setMediaUrl(null);
+                existingPost.setMediaType(null);
+            } else if (file != null && !file.isEmpty()) {
+                System.out.println("====Uploading new file=====");
+                System.out.println("File content type: " + file.getContentType());
+                
+                // Upload file mới
+                Map<String, Object> uploadResult = null;
+                try {
+                    uploadResult = cloudinaryService.uploadFile(file);
+                    System.out.println("====Upload result=====: " + uploadResult);
+                } catch (IOException uploadException) {
+                    System.out.println("====Upload failed=====: " + uploadException.getMessage());
+                    uploadException.printStackTrace();
+                    return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Lỗi khi tải lên tệp mới: " + uploadException.getMessage());
+                }
+                
+                if (uploadResult == null || !uploadResult.containsKey("secure_url")) {
+                    System.out.println("====Upload result is null or missing secure_url=====");
+                    return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Lỗi khi tải lên tệp mới - không nhận được URL");
+                }
+
+                // Xóa file cũ nếu có (optional - có thể bỏ comment để tiết kiệm storage)
+                if (existingPost.getMediaUrl() != null) {
+                    try {
+                        // cloudinaryService.deleteFile(existingPost.getMediaUrl());
+                        System.out.println("====Would delete old file=====: " + existingPost.getMediaUrl());
+                    } catch (Exception e) {
+                        System.out.println("Warning: Could not delete old media file: " + e.getMessage());
+                    }
+                }
+
+                // Cập nhật với file mới
+                String mediaUrl = (String) uploadResult.get("secure_url");
+                String contentType = file.getContentType();
+                String mediaType = (contentType != null && contentType.startsWith("video")) ? "video" : "image";
+                
+                System.out.println("====Setting new media URL=====: " + mediaUrl);
+                System.out.println("====Setting new media type=====: " + mediaType);
+                
+                existingPost.setMediaUrl(mediaUrl);
+                existingPost.setMediaType(mediaType);
+                
+                System.out.println("====Post media URL AFTER setting=====: " + existingPost.getMediaUrl());
+                System.out.println("====Post media type AFTER setting=====: " + existingPost.getMediaType());
+            }
+
+            // Kiểm tra bài viết có content hoặc media
+            if ((existingPost.getContent() == null || existingPost.getContent().trim().isEmpty()) && 
+                existingPost.getMediaUrl() == null) {
+                return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Bài viết phải có nội dung hoặc đính kèm file");
+            }
+
+            existingPost.setUpdatedAt(new Date());
+            
+            System.out.println("====Saving post with media URL=====: " + existingPost.getMediaUrl());
+            System.out.println("====Saving post with media type=====: " + existingPost.getMediaType());
+            
             Post savedPost = postRepository.save(existingPost);
+            
+            System.out.println("====Saved post media URL=====: " + savedPost.getMediaUrl());
+            System.out.println("====Saved post media type=====: " + savedPost.getMediaType());
+            System.out.println("====Saved post ID=====: " + savedPost.getId());
+            
             return ResponseHandler.response(HttpStatus.OK, "Chỉnh sửa bài viết thành công", savedPost);
         } catch (Exception e) {
-            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Chỉnh sửa bài viết thất bại", e.getMessage());
+            System.out.println("====Exception during edit=====: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Chỉnh sửa bài viết thất bại: " + e.getMessage());
         }
     }
 
@@ -825,6 +915,42 @@ public class PostController {
             return ResponseHandler.response(HttpStatus.CREATED, action, updatedPost);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "React thất bại", e.getMessage());
+        }
+    }
+
+    // Debug endpoint để kiểm tra thông tin post
+    @GetMapping("/posts/debug/{postId}")
+    public ResponseEntity<?> debugPost(@PathVariable String postId) {
+        try {
+            Optional<Post> postOpt = postRepository.findById(postId);
+            if (postOpt.isEmpty()) {
+                return ResponseHandler.response(HttpStatus.NOT_FOUND, "Không tìm thấy bài viết");
+            }
+
+            Post post = postOpt.get();
+            
+            System.out.println("====DEBUG POST=====");
+            System.out.println("Post ID: " + post.getId());
+            System.out.println("Post Content: " + post.getContent());
+            System.out.println("Post Media URL: " + post.getMediaUrl());
+            System.out.println("Post Media Type: " + post.getMediaType());
+            System.out.println("Post Created At: " + post.getCreatedAt());
+            System.out.println("Post Updated At: " + post.getUpdatedAt());
+            System.out.println("Post User: " + (post.getUser() != null ? post.getUser().getUsername() : "null"));
+            
+            Map<String, Object> debugInfo = Map.of(
+                "id", post.getId(),
+                "content", post.getContent() != null ? post.getContent() : "null",
+                "mediaUrl", post.getMediaUrl() != null ? post.getMediaUrl() : "null",
+                "mediaType", post.getMediaType() != null ? post.getMediaType() : "null",
+                "createdAt", post.getCreatedAt(),
+                "updatedAt", post.getUpdatedAt(),
+                "userEmail", post.getUser() != null ? post.getUser().getEmail() : "null"
+            );
+            
+            return ResponseHandler.response(HttpStatus.OK, "Debug info", debugInfo);
+        } catch (Exception e) {
+            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Debug failed", e.getMessage());
         }
     }
 }
