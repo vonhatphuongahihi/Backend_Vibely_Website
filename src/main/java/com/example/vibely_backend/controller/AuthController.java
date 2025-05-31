@@ -399,4 +399,16 @@ public class AuthController {
                     .body(new ApiResponse("error", "Đổi mật khẩu thất bại", e.getMessage()));
         }
     }
+
+    @GetMapping("/check-token")
+    public ResponseEntity<ApiResponse> checkToken(Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(401).body(new ApiResponse("error", "Token không hợp lệ", null));
+            }
+            return ResponseEntity.ok(new ApiResponse("success", "Token hợp lệ", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(new ApiResponse("error", "Token không hợp lệ", e.getMessage()));
+        }
+    }
 }

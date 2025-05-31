@@ -241,7 +241,30 @@ public class ChatbotService {
         public List<Chatbot> getChatHistory(String userId) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
-                return chatbotRepository.findByUserOrderByCreatedAtDesc(user);
+                // Lấy lịch sử chat theo thứ tự mới nhất lên đầu
+                List<Chatbot> chats = chatbotRepository.findByUserOrderByCreatedAtDesc(user);
+                // Đảo ngược thứ tự tin nhắn trong mỗi chat để tin nhắn mới nhất hiển thị cuối
+                // cùng
+                chats.forEach(chat -> {
+                        if (chat.getHistory() != null) {
+                                // Nhóm tin nhắn theo cặp (user message + bot response)
+                                List<ChatHistory> history = chat.getHistory();
+                                List<ChatHistory> orderedHistory = new ArrayList<>();
+
+                                // Xử lý từng cặp tin nhắn
+                                for (int i = 0; i < history.size(); i += 2) {
+                                        if (i + 1 < history.size()) {
+                                                // Thêm tin nhắn của user trước
+                                                orderedHistory.add(history.get(i));
+                                                // Thêm tin nhắn của bot sau
+                                                orderedHistory.add(history.get(i + 1));
+                                        }
+                                }
+
+                                chat.setHistory(orderedHistory);
+                        }
+                });
+                return chats;
         }
 
         // Thêm các phương thức quản lý training data
