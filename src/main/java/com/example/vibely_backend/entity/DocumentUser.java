@@ -5,8 +5,8 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,22 +22,32 @@ public class DocumentUser {
     @Id
     private String id;
 
+    @Field("title")
     private String title;
+
+    @Field("pages")
     private Integer pages;
 
-    @DBRef
-    private Level level;
+    @Field("level_id")
+    private String levelId;
 
-    @DBRef
-    private Subject subject;
+    @Field("subject_id")
+    private String subjectId;
 
+    @Field("file_type")
     private String fileType;
-    private LocalDateTime uploadDate;
+
+    @Field("file_url")
     private String fileUrl;
 
+    @Field("upload_date")
+    private LocalDateTime uploadDate;
+
     @CreatedDate
+    @Field("created_at")
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Field("updated_at")
     private LocalDateTime updatedAt;
 }

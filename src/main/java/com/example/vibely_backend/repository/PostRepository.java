@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface PostRepository extends MongoRepository<Post, String> {
     List<Post> findByUserIdOrderByCreatedAtDesc(String userId);
-    void deleteByUser_Id(String userId);
-} 
+
+    void deleteByUserId(String userId);
+}

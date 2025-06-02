@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -42,8 +43,12 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(origins = { "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3001",
-        "http://127.0.0.1:3000" }, allowCredentials = "true")
+        "http://127.0.0.1:3000", "https://vibely-study-social-website.vercel.app",
+        "https://vibely-study-social-admin-website.vercel.app" }, allowCredentials = "true")
 public class AuthController {
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Autowired
     private UserService service;
@@ -332,7 +337,8 @@ public class AuthController {
 
             // Chuyển hướng đến frontend kèm theo token và thông tin người dùng
             String redirectUrl = String.format(
-                    "http://localhost:3000?token=%s&userId=%s&email=%s&username=%s",
+                    "%s?token=%s&userId=%s&email=%s&username=%s",
+                    frontendUrl,
                     encodedToken,
                     user.getId(),
                     encodedEmail,
@@ -343,7 +349,7 @@ public class AuthController {
             response.sendRedirect(redirectUrl);
         } catch (Exception e) {
             log.error("OAuth2 login error: {}", e.getMessage());
-            String errorUrl = "http://localhost:3000/user-login?error=" +
+            String errorUrl = frontendUrl + "/user-login?error=" +
                     java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
             response.sendRedirect(errorUrl);
         }

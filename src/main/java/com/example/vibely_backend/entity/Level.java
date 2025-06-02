@@ -26,7 +26,7 @@ public class Level {
 
     @CreatedDate
     private LocalDateTime createdAt;
-    
+
     @LastModifiedDate
     private LocalDateTime updatedAt;
 }

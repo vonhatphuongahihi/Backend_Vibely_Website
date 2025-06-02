@@ -5,12 +5,8 @@ import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.example.vibely_backend.dto.response.MutualFriendResponse;
-import com.example.vibely_backend.dto.response.SimpleUserResponse;
-import com.example.vibely_backend.dto.response.UserProfileResponse;
 import com.example.vibely_backend.entity.Provider;
 import com.example.vibely_backend.entity.User;
 
@@ -26,16 +22,12 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     List<User> findAllByEmail(String email);
 
-    @Query("SELECT new com.example.vibely_backend.dto.response.SimpleUserResponse(u.id, u.username, u.profilePicture) FROM User u")
-    List<SimpleUserResponse> findAllSimpleUsers();
+    @Query(value = "{}", fields = "{ 'id': 1, 'username': 1, 'profilePicture': 1 }")
+    List<User> findAllSimpleUsers();
 
-    @Query("SELECT new com.example.vibely_backend.dto.response.MutualFriendResponse(u.id, u.username, u.profilePicture, u.email, u.followerCount, u.followingCount) FROM User u")
-    List<MutualFriendResponse> findAllUserFull();
+    @Query(value = "{}", fields = "{ 'id': 1, 'username': 1, 'profilePicture': 1, 'email': 1, 'followerCount': 1, 'followingCount': 1 }")
+    List<User> findAllUserFull();
 
-    @Query("SELECT new com.example.vibely_backend.dto.response.UserProfileResponse(" +
-            "u.id, u.username, u.email, u.gender, u.dateOfBirth, u.profilePicture, u.coverPicture, " +
-            "new com.example.vibely_backend.dto.response.UserProfileResponse$Bio(" +
-            "b.bioText, b.liveIn, b.relationship, b.workplace, b.education, b.phone, b.hometown)) " +
-            "FROM User u LEFT JOIN Bio b ON u.id = b.user.id WHERE u.id = :userId")
-    Optional<UserProfileResponse> findUserProfileById(@Param("userId") String userId);
+    @Query(value = "{ '_id': ?0 }", fields = "{ 'id': 1, 'username': 1, 'email': 1, 'gender': 1, 'dateOfBirth': 1, 'profilePicture': 1, 'coverPicture': 1, 'bioId': 1 }")
+    Optional<User> findUserProfileById(String userId);
 }

@@ -1,7 +1,6 @@
 package com.example.vibely_backend.entity;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -24,8 +23,7 @@ public class Achievement {
     @Id
     private String id;
 
-    @DBRef
-    private User user;
+    private String userId;
 
     private AchievementType type;
     private int goalsCompleted;
