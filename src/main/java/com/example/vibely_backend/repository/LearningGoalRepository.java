@@ -4,15 +4,14 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import com.example.vibely_backend.entity.LearningGoal;
-import com.example.vibely_backend.entity.User;
 
 import java.util.List;
 
 @Repository
 public interface LearningGoalRepository extends MongoRepository<LearningGoal, String> {
-    long countByUserAndIsCompletedFalse(User user);
+    List<LearningGoal> findByUserIdOrderByCreatedAtDesc(String userId);
 
-    long countByUserAndIsCompletedTrue(User user);
+    long countByUserIdAndIsCompletedTrue(String userId);
 
-    List<LearningGoal> findByUserOrderByCreatedAtDesc(User user);
+    long countByUserIdAndIsCompletedFalse(String userId);
 }

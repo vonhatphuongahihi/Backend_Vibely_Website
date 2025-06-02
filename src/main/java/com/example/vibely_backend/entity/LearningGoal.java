@@ -22,8 +22,7 @@ public class LearningGoal {
     @Id
     private String id;
 
-    @DBRef
-    private User user;
+    private String userId;
 
     private String title;
 
@@ -62,7 +61,7 @@ public class LearningGoal {
     // dùng
     public void checkIncompleteGoalsLimit(LearningGoalRepository learningGoalRepository) throws Exception {
         if (this.isNew()) { // Chỉ kiểm tra khi là đối tượng mới
-            long incompleteGoalsCount = learningGoalRepository.countByUserAndIsCompletedFalse(this.user);
+            long incompleteGoalsCount = learningGoalRepository.countByUserIdAndIsCompletedFalse(this.userId);
 
             if (incompleteGoalsCount >= 5) {
                 throw new Exception("Bạn đã có 5 mục tiêu chưa hoàn thành. Không thể tạo thêm.");

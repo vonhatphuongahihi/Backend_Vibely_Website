@@ -8,10 +8,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.stereotype.Service;
 
 import com.example.vibely_backend.dto.request.DocumentRequest;
@@ -62,13 +64,13 @@ public class DocumentService {
 
         Level level = levelOpt.get();
 
-        if (subjectRepository.findByNameAndLevel(name, level).isPresent()) {
+        if (subjectRepository.findByNameAndLevelId(name, levelId).isPresent()) {
             return new ApiResponse("error", "Môn học đã tồn tại cho cấp học này", null);
         }
 
         Subject subject = new Subject();
         subject.setName(name);
-        subject.setLevel(level);
+        subject.setLevelId(levelId);
         subjectRepository.save(subject);
         return new ApiResponse("success", "Tạo môn học thành công", subject);
     }
@@ -82,7 +84,7 @@ public class DocumentService {
         Level level = levelRepository.findById(levelId)
                 .orElseThrow(() -> new RuntimeException("Cấp học không hợp lệ"));
 
-        List<Subject> subjects = subjectRepository.findByLevel(level);
+        List<Subject> subjects = subjectRepository.findByLevelId(levelId);
 
         // Trả về danh sách chỉ gồm id và name (dưới dạng Map)
         List<Map<String, Object>> result = subjects.stream().map(subject -> {
@@ -109,22 +111,24 @@ public class DocumentService {
         doc.setPages(request.getPages());
         doc.setFileType(request.getFileType());
         doc.setFileUrl(request.getFileUrl());
-        doc.setLevel(levelOpt.get());
-        doc.setSubject(subjectOpt.get());
+        doc.setLevelId(levelOpt.get().getId());
+        doc.setSubjectId(subjectOpt.get().getId());
         doc.setUploadDate(LocalDateTime.now());
 
         documentRepository.save(doc);
 
+        Level level = levelOpt.get();
+        Subject subject = subjectOpt.get();
         DocumentResponse response = new DocumentResponse(
                 doc.getId(),
                 doc.getTitle(),
                 doc.getPages(),
                 doc.getFileType(),
                 doc.getFileUrl(),
-                doc.getLevel().getId(),
-                doc.getLevel().getName(),
-                doc.getSubject().getId(),
-                doc.getSubject().getName(),
+                level.getId(),
+                level.getName(),
+                subject.getId(),
+                subject.getName(),
                 doc.getUploadDate(),
                 doc.getUpdatedAt());
 
@@ -135,17 +139,11 @@ public class DocumentService {
         List<Criteria> criteriaList = new ArrayList<>();
 
         if (levelId != null && !levelId.isBlank()) {
-            Level level = levelRepository.findById(levelId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy cấp học"));
-
-            criteriaList.add(Criteria.where("level").is(level));
+            criteriaList.add(Criteria.where("level_id").is(levelId));
         }
 
         if (subjectId != null && !subjectId.isBlank()) {
-            Subject subject = subjectRepository.findById(subjectId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy môn học"));
-
-            criteriaList.add(Criteria.where("subject").is(subject));
+            criteriaList.add(Criteria.where("subject_id").is(subjectId));
         }
 
         if (query != null && !query.isBlank()) {
@@ -164,25 +162,64 @@ public class DocumentService {
         queryObj.with(Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<DocumentUser> documents = mongoTemplate.find(queryObj, DocumentUser.class);
-        return new ApiResponse("success", "Lấy danh sách tài liệu thành công", documents);
+
+        List<DocumentResponse> responses = documents.stream().map(doc -> {
+            Level level = null;
+            Subject subject = null;
+            if (doc.getLevelId() != null) {
+                level = levelRepository.findById(doc.getLevelId()).orElse(null);
+            }
+            if (doc.getSubjectId() != null) {
+                subject = subjectRepository.findById(doc.getSubjectId()).orElse(null);
+            }
+            return new DocumentResponse(
+                    doc.getId(),
+                    doc.getTitle(),
+                    doc.getPages(),
+                    doc.getFileType(),
+                    doc.getFileUrl(),
+                    level != null ? level.getId() : null,
+                    level != null ? level.getName() : null,
+                    subject != null ? subject.getId() : null,
+                    subject != null ? subject.getName() : null,
+                    doc.getUploadDate(),
+                    doc.getUpdatedAt());
+        }).collect(Collectors.toList());
+
+        return new ApiResponse("success", "Lấy danh sách tài liệu thành công", responses);
     }
 
     public ApiResponse getDocumentById(String id) {
         DocumentUser doc = documentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài liệu"));
 
-        DocumentResponse response = new DocumentResponse(
-                doc.getId(),
-                doc.getTitle(),
-                doc.getPages(),
-                doc.getFileType(),
-                doc.getFileUrl(),
-                doc.getLevel().getId(),
-                doc.getLevel().getName(),
-                doc.getSubject().getId(),
-                doc.getSubject().getName(),
-                doc.getUploadDate(),
-                doc.getUpdatedAt());
+        Level level = null;
+        Subject subject = null;
+        if (doc.getLevelId() != null) {
+            level = levelRepository.findById(doc.getLevelId()).orElse(null);
+        }
+        if (doc.getSubjectId() != null) {
+            subject = subjectRepository.findById(doc.getSubjectId()).orElse(null);
+        }
+
+        // Log để debug
+        System.out.println("Document from DB: " + doc);
+
+        DocumentResponse response = new DocumentResponse();
+        response.setId(doc.getId());
+        response.setTitle(doc.getTitle());
+        response.setPages(doc.getPages());
+        response.setFileType(doc.getFileType());
+        response.setFileUrl(doc.getFileUrl());
+        response.setLevelId(level != null ? level.getId() : null);
+        response.setLevelName(level != null ? level.getName() : null);
+        response.setSubjectId(subject != null ? subject.getId() : null);
+        response.setSubjectName(subject != null ? subject.getName() : null);
+        response.setUploadDate(doc.getUploadDate());
+        response.setUpdatedAt(doc.getUpdatedAt());
+
+        // Log để debug
+        System.out.println("Response object: " + response);
 
         return new ApiResponse("success", "Lấy tài liệu theo ID thành công", response);
     }
@@ -194,13 +231,13 @@ public class DocumentService {
         if (req.getLevelId() != null) {
             Level level = levelRepository.findById(req.getLevelId())
                     .orElseThrow(() -> new RuntimeException("Cấp học không hợp lệ"));
-            doc.setLevel(level);
+            doc.setLevelId(level.getId());
         }
 
         if (req.getSubjectId() != null) {
             Subject subject = subjectRepository.findById(req.getSubjectId())
                     .orElseThrow(() -> new RuntimeException("Môn học không hợp lệ"));
-            doc.setSubject(subject);
+            doc.setSubjectId(subject.getId());
         }
 
         doc.setTitle(req.getTitle());
@@ -209,16 +246,24 @@ public class DocumentService {
         doc.setFileUrl(req.getFileUrl());
         documentRepository.save(doc);
 
+        Level level = null;
+        Subject subject = null;
+        if (doc.getLevelId() != null) {
+            level = levelRepository.findById(doc.getLevelId()).orElse(null);
+        }
+        if (doc.getSubjectId() != null) {
+            subject = subjectRepository.findById(doc.getSubjectId()).orElse(null);
+        }
         DocumentResponse response = new DocumentResponse(
                 doc.getId(),
                 doc.getTitle(),
                 doc.getPages(),
                 doc.getFileType(),
                 doc.getFileUrl(),
-                doc.getLevel().getId(),
-                doc.getLevel().getName(),
-                doc.getSubject().getId(),
-                doc.getSubject().getName(),
+                level != null ? level.getId() : null,
+                level != null ? level.getName() : null,
+                subject != null ? subject.getId() : null,
+                subject != null ? subject.getName() : null,
                 doc.getUploadDate(),
                 doc.getUpdatedAt());
 
@@ -240,11 +285,11 @@ public class DocumentService {
         DocumentUser document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new RuntimeException("Tài liệu không tồn tại"));
 
-        if (user.getSavedDocuments().contains(document)) {
+        if (user.getSavedDocuments().contains(documentId)) {
             return new ApiResponse("error", "Tài liệu đã được lưu trước đó", null);
         }
 
-        user.getSavedDocuments().add(document);
+        user.getSavedDocuments().add(documentId);
         userRepository.save(user);
 
         return new ApiResponse("success", "Lưu tài liệu thành công", user.getSavedDocuments());

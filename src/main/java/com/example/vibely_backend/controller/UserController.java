@@ -47,7 +47,8 @@ import com.example.vibely_backend.service.UserService;
 @CrossOrigin(origins = {
         "http://localhost:3001", "http://localhost:3000",
         "http://127.0.0.1:3001", "http://127.0.0.1:3000",
-        "https://vibely-study-social-website.vercel.app"
+        "https://vibely-study-social-website.vercel.app",
+        "https://vibely-study-social-admin-website.vercel.app"
 })
 public class UserController {
 
@@ -99,11 +100,8 @@ public class UserController {
             @RequestPart(value = "coverPicture", required = false) MultipartFile coverPicture) {
         try {
             String userId = getUserIdFromAuthHeader(authHeader);
-
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-
-            Bio currentBio = user.getBio();
 
             if (profilePicture != null && !profilePicture.isEmpty()) {
                 if (!profilePicture.getContentType().startsWith("image/")) {
@@ -131,8 +129,6 @@ public class UserController {
             if (request.getDateOfBirth() != null)
                 user.setDateOfBirth(request.getDateOfBirth());
 
-            user.setBio(currentBio);
-
             userRepository.save(user);
             UserInfoResponse userReponse = userService.convertToUserInfoResponse(user);
 
@@ -154,9 +150,9 @@ public class UserController {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-            Bio bio = bioRepository.findByUser(user).orElseGet(() -> {
+            Bio bio = bioRepository.findByUserId(userId).orElseGet(() -> {
                 Bio newBio = new Bio();
-                newBio.setUser(user);
+                newBio.setUserId(userId);
                 newBio.setCreatedAt(new Date());
                 return newBio;
             });
@@ -175,12 +171,7 @@ public class UserController {
                 bio.setHometown(bioRequest.getHometown());
 
             bio.setUpdatedAt(new Date());
-
             Bio savedBio = bioRepository.save(bio);
-
-            Query query = new Query(Criteria.where("_id").is(userId));
-            Update update = new Update().set("bio", savedBio);
-            mongoTemplate.updateFirst(query, update, User.class);
 
             return ResponseEntity.ok(new ApiResponse("success", "Cập nhật tiểu sử thành công", savedBio));
         } catch (Exception e) {

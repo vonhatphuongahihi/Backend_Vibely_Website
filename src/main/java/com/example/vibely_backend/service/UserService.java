@@ -37,6 +37,7 @@ import com.example.vibely_backend.entity.Post;
 import com.example.vibely_backend.entity.Provider;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.BioRepository;
+import com.example.vibely_backend.repository.DocumentRepository;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
 
@@ -60,6 +61,9 @@ public class UserService {
 
     @Autowired
     private BioRepository bioRepository;
+
+    @Autowired
+    private DocumentRepository documentRepository;
 
     @Autowired
     private CloudinaryService cloudinaryService;
@@ -193,59 +197,47 @@ public class UserService {
         return userRepository.findByUsername(username);
     }
 
-    public User updateUserProfile(
-            String userId,
-            UserProfileUpdateRequest request,
-            String profilePictureUrl,
-            String coverPictureUrl) {
+    public User updateUserProfile(String userId, UserProfileUpdateRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        // Cập nhật thông tin từ request
-        if (request.getUsername() != null)
+        if (request.getUsername() != null) {
             user.setUsername(request.getUsername());
-        if (request.getEmail() != null)
+        }
+        if (request.getEmail() != null) {
             user.setEmail(request.getEmail());
-        if (request.getGender() != null)
+        }
+        if (request.getGender() != null) {
             user.setGender(request.getGender());
-
-        // Nếu dateOfBirth là String thì cần parse:
+        }
         if (request.getDateOfBirth() != null) {
             user.setDateOfBirth(request.getDateOfBirth());
         }
-
-        // Cập nhật ảnh nếu có
-        if (profilePictureUrl != null)
-            user.setProfilePicture(profilePictureUrl);
-        if (coverPictureUrl != null)
-            user.setCoverPicture(coverPictureUrl);
 
         return userRepository.save(user);
     }
 
     public UserInfoResponse convertToUserInfoResponse(User user) {
-        UserInfoResponse userResponse = new UserInfoResponse();
-        userResponse.setId(user.getId());
-        userResponse.setUsername(user.getUsername());
-        userResponse.setEmail(user.getEmail());
-        userResponse.setGender(user.getGender());
-        userResponse.setDateOfBirth(user.getDateOfBirth());
-        userResponse.setProfilePicture(user.getProfilePicture());
-        userResponse.setCoverPicture(user.getCoverPicture());
+        UserInfoResponse response = new UserInfoResponse();
+        response.setId(user.getId());
+        response.setUsername(user.getUsername());
+        response.setEmail(user.getEmail());
+        response.setGender(user.getGender());
+        response.setDateOfBirth(user.getDateOfBirth());
+        response.setProfilePicture(user.getProfilePicture());
+        response.setCoverPicture(user.getCoverPicture());
+        response.setFollowers(user.getFollowers());
+        response.setFollowings(user.getFollowings());
+        response.setPosts(user.getPosts());
+        response.setLikedPosts(user.getLikedPosts());
+        response.setSavedPosts(user.getSavedPosts());
+        response.setSavedDocuments(user.getSavedDocuments());
+        response.setPostsCount(user.getPostsCount());
+        response.setFollowerCount(user.getFollowerCount());
+        response.setFollowingCount(user.getFollowingCount());
 
-        userResponse.setFollowers(user.getFollowers().stream().map(User::getId).collect(Collectors.toList()));
-        userResponse.setFollowings(user.getFollowings().stream().map(User::getId).collect(Collectors.toList()));
-        userResponse.setPosts(user.getPosts().stream().map(Post::getId).collect(Collectors.toList()));
-        userResponse.setLikedPosts(user.getLikedPosts().stream().map(Post::getId).collect(Collectors.toList()));
-        userResponse.setSavedPosts(user.getSavedPosts().stream().map(Post::getId).collect(Collectors.toList()));
-        userResponse.setSavedDocuments(
-                user.getSavedDocuments().stream().map(DocumentUser::getId).collect(Collectors.toList()));
-
-        userResponse.setPostsCount(user.getPostsCount());
-        userResponse.setFollowerCount(user.getFollowerCount());
-        userResponse.setFollowingCount(user.getFollowingCount());
-
-        Bio bio = user.getBio();
+        // Get bio from bioRepository using userId
+        Bio bio = bioRepository.findByUserId(user.getId()).orElse(null);
         if (bio != null) {
             BioResponse bioResponse = new BioResponse(
                     bio.getBioText(),
@@ -254,10 +246,10 @@ public class UserService {
                     bio.getWorkplace(),
                     bio.getEducation(),
                     bio.getHometown());
-            userResponse.setBio(bioResponse);
+            response.setBio(bioResponse);
         }
 
-        return userResponse;
+        return response;
     }
 
     private String getCurrentUserId() {
@@ -284,12 +276,13 @@ public class UserService {
             return new ApiResponse("error", "Người dùng cần theo dõi không tồn tại", null);
         }
 
-        if (currentUser.getFollowings().contains(userToFollow)) {
+        if (currentUser.getFollowings().contains(userIdToFollow)) {
             return new ApiResponse("error", "Bạn đã theo dõi người dùng này", null);
         }
 
-        currentUser.getFollowings().add(userToFollow);
-        userToFollow.getFollowers().add(currentUser);
+        // Thêm ID vào danh sách
+        currentUser.getFollowings().add(userIdToFollow);
+        userToFollow.getFollowers().add(currentUserId);
 
         currentUser.setFollowingCount(currentUser.getFollowings().size());
         userToFollow.setFollowerCount(userToFollow.getFollowers().size());
@@ -319,17 +312,17 @@ public class UserService {
             return new ApiResponse("error", "Người dùng cần bỏ theo dõi không tồn tại", null);
         }
 
-        boolean isFollowing = currentUser.getFollowings().stream()
-                .anyMatch(user -> user.getId().equals(userIdToUnfollow));
+        boolean isFollowing = currentUser.getFollowings().contains(userIdToUnfollow);
 
         if (!isFollowing) {
             return new ApiResponse("error", "Bạn chưa theo dõi người dùng này", null);
         }
 
-        currentUser.getFollowers().remove(userToUnfollow);
-        currentUser.getFollowings().remove(userToUnfollow);
-        userToUnfollow.getFollowers().remove(currentUser);
-        userToUnfollow.getFollowings().remove(currentUser);
+        // Xóa ID khỏi danh sách
+        currentUser.getFollowers().remove(userIdToUnfollow);
+        currentUser.getFollowings().remove(userIdToUnfollow);
+        userToUnfollow.getFollowers().remove(currentUserId);
+        userToUnfollow.getFollowings().remove(currentUserId);
 
         currentUser.setFollowerCount(currentUser.getFollowers().size());
         currentUser.setFollowingCount(currentUser.getFollowings().size());
@@ -382,11 +375,13 @@ public class UserService {
             return new ApiResponse("error", "Người dùng không tồn tại", null);
         }
 
-        List<SimpleUserResponse> requests = userRepository
-                .findAllById(currentUser.getFollowers().stream()
-                        .filter(f -> !currentUser.getFollowings().contains(f))
-                        .map(User::getId)
-                        .toList())
+        // Lấy danh sách ID người gửi lời mời kết bạn
+        List<String> requestSenderIds = currentUser.getFollowers().stream()
+                .filter(followerId -> !currentUser.getFollowings().contains(followerId))
+                .toList();
+
+        // Lấy thông tin người dùng từ danh sách ID
+        List<SimpleUserResponse> requests = userRepository.findAllById(requestSenderIds)
                 .stream()
                 .map(user -> new SimpleUserResponse(user.getId(), user.getUsername(), user.getProfilePicture()))
                 .toList();
@@ -405,18 +400,13 @@ public class UserService {
 
         Set<String> excludedIds = new HashSet<>();
         excludedIds.add(currentUser.getId());
+        excludedIds.addAll(currentUser.getFollowers());
+        excludedIds.addAll(currentUser.getFollowings());
 
-        excludedIds.addAll(
-                currentUser.getFollowers().stream()
-                        .map(User::getId)
-                        .collect(Collectors.toSet()));
-
-        excludedIds.addAll(
-                currentUser.getFollowings().stream()
-                        .map(User::getId)
-                        .collect(Collectors.toSet()));
-
-        List<SimpleUserResponse> allUsers = userRepository.findAllSimpleUsers();
+        // Lấy tất cả người dùng và chuyển đổi sang SimpleUserResponse
+        List<SimpleUserResponse> allUsers = userRepository.findAll().stream()
+                .map(user -> new SimpleUserResponse(user.getId(), user.getUsername(), user.getProfilePicture()))
+                .toList();
 
         // Lọc ra những người chưa liên quan
         List<SimpleUserResponse> suggestions = allUsers.stream()
@@ -434,13 +424,16 @@ public class UserService {
         }
 
         // Lấy danh sách ID mà profileUser đang follow
-        Set<String> followingIds = profileUser.getFollowings().stream()
-                .map(User::getId)
-                .collect(Collectors.toSet());
+        Set<String> followingIds = new HashSet<>(profileUser.getFollowings());
 
         // Lọc follower nào cũng đang được follow lại (bạn chung)
-        List<MutualFriendResponse> mutualFriends = profileUser.getFollowers().stream()
-                .filter(follower -> followingIds.contains(follower.getId()))
+        List<String> mutualFriendIds = profileUser.getFollowers().stream()
+                .filter(followerId -> followingIds.contains(followerId))
+                .toList();
+
+        // Lấy thông tin chi tiết của bạn chung
+        List<MutualFriendResponse> mutualFriends = userRepository.findAllById(mutualFriendIds)
+                .stream()
                 .map(user -> new MutualFriendResponse(
                         user.getId(),
                         user.getUsername(),
@@ -454,7 +447,15 @@ public class UserService {
     }
 
     public ApiResponse getAllUsers() {
-        List<MutualFriendResponse> userInfos = userRepository.findAllUserFull();
+        List<MutualFriendResponse> userInfos = userRepository.findAll().stream()
+                .map(user -> new MutualFriendResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getProfilePicture(),
+                        user.getEmail(),
+                        user.getFollowers().size(),
+                        user.getFollowings().size()))
+                .toList();
 
         return new ApiResponse("success", "Lấy tất cả người dùng thành công", userInfos);
     }
@@ -468,7 +469,7 @@ public class UserService {
         }
 
         User user = optionalUser.get();
-        Bio bio = user.getBio();
+        Bio bio = bioRepository.findByUserId(userId).orElse(null);
 
         BioResponse bioResponse = bio != null ? new BioResponse(
                 bio.getBioText(),
@@ -476,7 +477,6 @@ public class UserService {
                 bio.getRelationship(),
                 bio.getWorkplace(),
                 bio.getEducation(),
-                // bio.getPhone(),
                 bio.getHometown()) : null;
 
         UserProfileResponse userProfile = new UserProfileResponse(
@@ -522,11 +522,15 @@ public class UserService {
             return new ApiResponse("error", "Người dùng không tồn tại", null);
         }
 
-        List<DocumentUser> filteredDocs = user.getSavedDocuments().stream()
+        // Lấy danh sách tài liệu đã lưu từ repository
+        List<DocumentUser> savedDocs = documentRepository.findAllById(user.getSavedDocuments());
+
+        // Lọc theo điều kiện
+        List<DocumentUser> filteredDocs = savedDocs.stream()
                 .filter(doc -> (query == null || query.isBlank()
                         || doc.getTitle().toLowerCase().contains(query.toLowerCase())) &&
-                        (level == null || level.isBlank() || doc.getLevel().getId().equals(level)) &&
-                        (subject == null || subject.isBlank() || doc.getSubject().getId().equals(subject)))
+                        (level == null || level.isBlank() || doc.getLevelId().equals(level)) &&
+                        (subject == null || subject.isBlank() || doc.getSubjectId().equals(subject)))
                 .toList();
 
         return new ApiResponse("success", "Lấy danh sách tài liệu đã lưu thành công", filteredDocs);
@@ -541,12 +545,13 @@ public class UserService {
             return new ApiResponse("error", "Người dùng không tồn tại", null);
         }
 
-        Optional<DocumentUser> doc = user.getSavedDocuments().stream()
-                .filter(d -> d.getId().equals(documentId))
-                .findFirst();
-
-        if (doc.isEmpty()) {
+        if (!user.getSavedDocuments().contains(documentId)) {
             return new ApiResponse("error", "Tài liệu không tồn tại trong danh sách đã lưu", null);
+        }
+
+        Optional<DocumentUser> doc = documentRepository.findById(documentId);
+        if (doc.isEmpty()) {
+            return new ApiResponse("error", "Không tìm thấy tài liệu", null);
         }
 
         return new ApiResponse("success", "Lấy thông tin tài liệu đã lưu thành công", doc.get());
@@ -561,7 +566,7 @@ public class UserService {
             return new ApiResponse("error", "Người dùng không tồn tại", null);
         }
 
-        boolean removed = user.getSavedDocuments().removeIf(doc -> doc.getId().equals(documentId));
+        boolean removed = user.getSavedDocuments().remove(documentId);
 
         if (!removed) {
             return new ApiResponse("error", "Tài liệu không tồn tại trong danh sách đã lưu", null);
@@ -591,7 +596,15 @@ public class UserService {
                     if (imageUrl != null && !imageUrl.isEmpty()) {
                         user.setProfilePicture(imageUrl);
                     }
-                    return userRepository.save(user);
+                    user.setFollowerCount(0);
+                    user.setFollowingCount(0);
+                    user = userRepository.save(user);
+                    Bio bio = new Bio();
+                    bio.setUserId(user.getId());
+                    bio.setCreatedAt(new Date());
+                    bio.setUpdatedAt(new Date());
+                    bio = bioRepository.save(bio);
+                    return user;
                 } else {
                     // Tạo user mới cho GitHub
                     user = new User();
@@ -616,15 +629,13 @@ public class UserService {
                     user.setPostsCount(0);
                     user.setFollowerCount(0);
                     user.setFollowingCount(0);
-                    user.setBio(null);
                     user = userRepository.save(user);
                     Bio bio = new Bio();
-                    bio.setUser(user);
+                    bio.setUserId(user.getId());
                     bio.setCreatedAt(new Date());
                     bio.setUpdatedAt(new Date());
                     bio = bioRepository.save(bio);
-                    user.setBio(bio);
-                    return userRepository.save(user);
+                    return user;
                 }
             }
             // Các provider khác giữ nguyên
@@ -645,7 +656,15 @@ public class UserService {
                         user.setProfilePicture(imageUrl);
                     }
                 }
-                return userRepository.save(user);
+                user.setFollowerCount(0);
+                user.setFollowingCount(0);
+                user = userRepository.save(user);
+                Bio bio = new Bio();
+                bio.setUserId(user.getId());
+                bio.setCreatedAt(new Date());
+                bio.setUpdatedAt(new Date());
+                bio = bioRepository.save(bio);
+                return user;
             } else {
                 // Tạo user mới cho provider khác
                 user = new User();
@@ -676,15 +695,13 @@ public class UserService {
                 user.setPostsCount(0);
                 user.setFollowerCount(0);
                 user.setFollowingCount(0);
-                user.setBio(null);
                 user = userRepository.save(user);
                 Bio bio = new Bio();
-                bio.setUser(user);
+                bio.setUserId(user.getId());
                 bio.setCreatedAt(new Date());
                 bio.setUpdatedAt(new Date());
                 bio = bioRepository.save(bio);
-                user.setBio(bio);
-                return userRepository.save(user);
+                return user;
             }
         } catch (Exception e) {
             log.error("Lỗi xử lý OAuth2 user: {}", e.getMessage(), e);
@@ -765,5 +782,18 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
         return user.getGoogleCalendarTokenExpiry();
+    }
+
+    public User deleteUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        // Xóa bio nếu có
+        bioRepository.findByUserId(userId).ifPresent(bio -> {
+            bioRepository.delete(bio);
+        });
+
+        userRepository.delete(user);
+        return user;
     }
 }

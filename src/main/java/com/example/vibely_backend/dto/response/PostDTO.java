@@ -39,13 +39,12 @@ public class PostDTO {
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
         this.reactionStats = new ReactionStats(
-            post.getReactionStats() != null ? post.getReactionStats().getLike() : 0,
-            post.getReactionStats() != null ? post.getReactionStats().getLove() : 0,
-            post.getReactionStats() != null ? post.getReactionStats().getHaha() : 0,
-            post.getReactionStats() != null ? post.getReactionStats().getWow() : 0,
-            post.getReactionStats() != null ? post.getReactionStats().getSad() : 0,
-            post.getReactionStats() != null ? post.getReactionStats().getAngry() : 0
-        );
+                post.getReactionStats() != null ? post.getReactionStats().getLike() : 0,
+                post.getReactionStats() != null ? post.getReactionStats().getLove() : 0,
+                post.getReactionStats() != null ? post.getReactionStats().getHaha() : 0,
+                post.getReactionStats() != null ? post.getReactionStats().getWow() : 0,
+                post.getReactionStats() != null ? post.getReactionStats().getSad() : 0,
+                post.getReactionStats() != null ? post.getReactionStats().getAngry() : 0);
 
         // Assign userDTO to the user field
         this.user = userDTO;
@@ -53,31 +52,28 @@ public class PostDTO {
         // Map reactions if present
         if (post.getReactions() != null) {
             this.reactions = post.getReactions().stream().map(r -> new Reaction(
-                    new UserMiniDTO(r.getUser()), // Assuming Reaction has a User reference
+                    new UserMiniDTO(r.getUserId()), // Using userId instead of User reference
                     r.getType(),
-                    r.getCreatedAt()
-            )).collect(Collectors.toList());
+                    r.getCreatedAt())).collect(Collectors.toList());
         }
 
         // Map comments if present
         if (post.getComments() != null) {
             this.comments = post.getComments().stream().map(c -> new Comment(
                     c.getId(),
-                    new UserMiniDTO(c.getUser()), // Assuming Comment has a User reference
+                    new UserMiniDTO(c.getUserId()), // Using userId instead of User reference
                     c.getText(),
                     c.getCreatedAt(),
                     c.getReactions() != null ? c.getReactions().stream().map(r -> new Reaction(
-                            new UserMiniDTO(r.getUser()),
+                            new UserMiniDTO(r.getUserId()), // Using userId instead of User reference
                             r.getType(),
-                            r.getCreatedAt()
-                    )).collect(Collectors.toList()) : null,
+                            r.getCreatedAt())).collect(Collectors.toList()) : null,
                     c.getReplies() != null ? c.getReplies().stream().map(reply -> new Reply(
                             reply.getId(),
-                            new UserMiniDTO(reply.getUser()), // Assuming Reply has a User reference
+                            new UserMiniDTO(reply.getUserId()), // Using userId instead of User reference
                             reply.getText(),
-                            reply.getCreatedAt()
-                    )).collect(Collectors.toList()) : null
-            )).collect(Collectors.toList());
+                            reply.getCreatedAt())).collect(Collectors.toList()) : null))
+                    .collect(Collectors.toList());
         }
     }
 

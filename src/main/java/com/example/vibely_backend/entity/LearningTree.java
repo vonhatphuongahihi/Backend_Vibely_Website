@@ -1,8 +1,8 @@
 package com.example.vibely_backend.entity;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.annotation.CreatedDate;
 
 import lombok.AllArgsConstructor;
@@ -20,23 +20,31 @@ public class LearningTree {
     @Id
     private String id;
 
-    @DBRef
-    private User user;
+    @Field("user_id")
+    private String userId;
 
+    @Field("tree_type")
     private String treeType;
+
+    @Field("growth_stage")
     private int growthStage;
+
+    @Field("completed_goals_count")
     private int completedGoalsCount;
 
     @CreatedDate
+    @Field("created_at")
     private LocalDateTime createdAt;
+
+    @Field("last_updated")
     private LocalDateTime lastUpdated;
 
-    // Tạo các hằng số cho tree type
+    // Constants for tree types
     public static final String CACTUS = "cactus";
     public static final String GREEN_TREE = "green_tree";
     public static final String SUNFLOWER = "sunflower";
 
-    // Quá trình phát triển của cây học tập
+    // Growth stages
     public static final int TAN_BINH = 0;
     public static final int TAP_SU = 1;
     public static final int CHIEN_BINH = 2;
