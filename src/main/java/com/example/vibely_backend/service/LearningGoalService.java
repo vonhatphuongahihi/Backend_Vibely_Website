@@ -39,7 +39,7 @@ public class LearningGoalService {
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
 
         LearningGoal goal = new LearningGoal();
-        goal.setUser(user);
+        goal.setUserId(user.getId());
         goal.setTitle(title);
         goal.setCompleted(false);
         goal.setVisible(true);
@@ -58,14 +58,14 @@ public class LearningGoalService {
     public List<LearningGoal> getGoals(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
-        return learningGoalRepository.findByUserOrderByCreatedAtDesc(user);
+        return learningGoalRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
     }
 
     public LearningGoal updateGoal(String userId, String goalId, String title) {
         LearningGoal goal = learningGoalRepository.findById(goalId)
                 .orElseThrow(() -> new IllegalArgumentException("Mục tiêu không tồn tại"));
 
-        if (!goal.getUser().getId().equals(userId)) {
+        if (!goal.getUserId().equals(userId)) {
             throw new IllegalArgumentException("Không có quyền cập nhật mục tiêu này");
         }
 
@@ -78,7 +78,7 @@ public class LearningGoalService {
         LearningGoal goal = learningGoalRepository.findById(goalId)
                 .orElseThrow(() -> new IllegalArgumentException("Mục tiêu không tồn tại"));
 
-        if (!goal.getUser().getId().equals(userId)) {
+        if (!goal.getUserId().equals(userId)) {
             throw new IllegalArgumentException("Không có quyền xóa mục tiêu này");
         }
 
@@ -90,7 +90,7 @@ public class LearningGoalService {
         LearningGoal goal = learningGoalRepository.findById(goalId)
                 .orElseThrow(() -> new IllegalArgumentException("Mục tiêu không tồn tại"));
 
-        if (!goal.getUser().getId().equals(userId)) {
+        if (!goal.getUserId().equals(userId)) {
             throw new IllegalArgumentException("Không có quyền cập nhật mục tiêu này");
         }
 
@@ -104,10 +104,10 @@ public class LearningGoalService {
 
         if (goal.isCompleted()) {
             // Cập nhật cây học tập và kiểm tra achievements
-            LearningTree tree = learningTreeRepository.findByUser_Id(userId)
+            LearningTree tree = learningTreeRepository.findByUserId(goal.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy cây học tập"));
 
-            long completedCount = learningGoalRepository.countByUserAndIsCompletedTrue(goal.getUser());
+            long completedCount = learningGoalRepository.countByUserIdAndIsCompletedTrue(goal.getUserId());
             tree.setCompletedGoalsCount((int) completedCount);
             tree.setLastUpdated(LocalDateTime.now());
             learningTreeRepository.save(tree);
@@ -125,7 +125,7 @@ public class LearningGoalService {
         LearningGoal goal = learningGoalRepository.findById(goalId)
                 .orElseThrow(() -> new IllegalArgumentException("Mục tiêu không tồn tại"));
 
-        if (!goal.getUser().getId().equals(userId)) {
+        if (!goal.getUserId().equals(userId)) {
             throw new IllegalArgumentException("Không có quyền cập nhật mục tiêu này");
         }
 
@@ -155,7 +155,7 @@ public class LearningGoalService {
                 if (types[i] == Achievement.AchievementType.ROOKIE && completedCount == 1) {
                     // Luôn tạo mới ROOKIE achievement khi hoàn thành mục tiêu đầu tiên
                     Achievement achievement = new Achievement();
-                    achievement.setUser(user);
+                    achievement.setUserId(user.getId());
                     achievement.setType(types[i]);
                     achievement.setGoalsCompleted((int) completedCount);
                     achievement.setUnlockedAt(LocalDateTime.now());
@@ -164,7 +164,7 @@ public class LearningGoalService {
                 } else if (existingAchievement.isEmpty()) {
                     // Xử lý các achievement khác như bình thường
                     Achievement achievement = new Achievement();
-                    achievement.setUser(user);
+                    achievement.setUserId(user.getId());
                     achievement.setType(types[i]);
                     achievement.setGoalsCompleted((int) completedCount);
                     achievement.setUnlockedAt(LocalDateTime.now());

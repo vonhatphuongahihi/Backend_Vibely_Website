@@ -37,7 +37,7 @@ public class AdminUserController {
             return response;
         }
     }
- 
+
     @DeleteMapping("/{userId}")
     public Map<String, Object> deleteUser(@PathVariable String userId) {
         Map<String, Object> response = new HashMap<>();
@@ -51,8 +51,8 @@ public class AdminUserController {
 
             User user = optionalUser.get();
 
-            // 🔥 Sửa dòng này: dùng deleteByUser_Id
-            postRepository.deleteByUser_Id(userId);
+            // Xóa tất cả bài viết của user
+            postRepository.deleteByUserId(userId);
 
             userRepository.deleteById(userId);
 
@@ -104,13 +104,14 @@ public class AdminUserController {
             }
             User user = optionalUser.get();
 
-            Set<String> followingIds = user.getFollowings().stream()
-                    .map(User::getId)
-                    .collect(Collectors.toSet());
+            // Lấy danh sách ID người dùng đang theo dõi
+            Set<String> followingIds = new HashSet<>(user.getFollowings());
 
-            List<User> mutualFriends = user.getFollowers().stream()
-                    .filter(follower -> followingIds.contains(follower.getId()))
-                    .collect(Collectors.toList());
+            // Lọc ra những người dùng vừa là follower vừa là following
+            List<User> mutualFriends = userRepository.findAllById(
+                    user.getFollowers().stream()
+                            .filter(followerId -> followingIds.contains(followerId))
+                            .collect(Collectors.toList()));
 
             response.put("status", "success");
             response.put("message", "Lấy danh sách bạn chung thành công");

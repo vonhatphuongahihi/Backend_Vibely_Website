@@ -50,6 +50,9 @@ public class ChatbotService {
         @Autowired
         private ChatbotTrainingDataRepository trainingDataRepository;
 
+        @Autowired
+        private DocumentRepository documentRepository;
+
         private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
         public SseEmitter createEmitter() {
@@ -83,7 +86,7 @@ public class ChatbotService {
                 }
 
                 Chatbot newChat = new Chatbot();
-                newChat.setUser(user);
+                newChat.setUserId(user.getId());
                 newChat.setHistory(List.of(
                                 new ChatHistory("user", List.of(new ChatHistory.ChatPart(text))),
                                 new ChatHistory("model", List.of(new ChatHistory.ChatPart(answer)))));
@@ -97,6 +100,94 @@ public class ChatbotService {
                 // Lấy thông tin người dùng
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Xử lý câu hỏi về lịch học
+                if (message != null && (message.toLowerCase().contains("lịch học") ||
+                                message.toLowerCase().contains("schedule") ||
+                                message.toLowerCase().contains("thời khóa biểu"))) {
+
+                        List<Schedule> schedules = scheduleRepository.findByUserIdOrderByStartTimeAsc(userId);
+                        if (schedules.isEmpty()) {
+                                return "Bạn chưa có lịch học nào. Hãy tạo lịch học để quản lý thời gian hiệu quả!";
+                        }
+
+                        StringBuilder response = new StringBuilder("Lịch học của bạn:\n");
+                        for (Schedule schedule : schedules) {
+                                response.append(String.format(
+                                                "- Môn: %s\n" +
+                                                                "  Thời gian: %s đến %s\n",
+                                                schedule.getSubject(),
+                                                schedule.getStartTime(),
+                                                schedule.getEndTime()));
+                        }
+                        return response.toString();
+                }
+
+                // Xử lý câu hỏi về cây học tập
+                if (message != null && (message.toLowerCase().contains("cây học tập") ||
+                                message.toLowerCase().contains("learning tree"))) {
+                        List<LearningGoal> goals = learningGoalRepository.findByUserIdOrderByCreatedAtDesc(userId);
+                        if (goals.isEmpty()) {
+                                return "Bạn chưa có cây học tập. Hãy bắt đầu hành trình học tập của bạn!";
+                        }
+
+                        // Lấy thông tin về mục tiêu đã hoàn thành
+                        List<LearningGoal> completedGoals = goals.stream()
+                                        .filter(LearningGoal::isCompleted)
+                                        .collect(Collectors.toList());
+                        int totalGoals = goals.size();
+                        int completedCount = completedGoals.size();
+
+                        // Lấy thông tin về level hiện tại
+                        String currentLevel = "Tân Binh";
+                        if (completedCount >= 100) {
+                                currentLevel = "Thần Vương";
+                        } else if (completedCount >= 50) {
+                                currentLevel = "Cao Thủ";
+                        } else if (completedCount >= 20) {
+                                currentLevel = "Tinh Anh";
+                        } else if (completedCount >= 10) {
+                                currentLevel = "Chiến Binh";
+                        } else if (completedCount >= 5) {
+                                currentLevel = "Tập Sự";
+                        }
+
+                        return String.format(
+                                        "Cây học tập của bạn đang ở level %s. " +
+                                                        "Bạn đã hoàn thành %d/%d mục tiêu học tập. " +
+                                                        "Mục tiêu gần nhất hoàn thành là: '%s'",
+                                        currentLevel,
+                                        completedCount,
+                                        totalGoals,
+                                        completedGoals.isEmpty() ? "Chưa có" : completedGoals.get(0).getTitle());
+                }
+
+                // Xử lý câu hỏi về thông tin cá nhân
+                if (message != null && (message.toLowerCase().contains("thông tin") ||
+                                message.toLowerCase().contains("profile") ||
+                                message.toLowerCase().contains("tôi là ai"))) {
+                        return String.format(
+                                        "Thông tin của bạn:\n" +
+                                                        "- Tên người dùng: %s\n" +
+                                                        "- Email: %s\n" +
+                                                        "- Số bài viết: %d\n" +
+                                                        "- Số người theo dõi: %d\n" +
+                                                        "- Số người đang theo dõi: %d",
+                                        user.getUsername(),
+                                        user.getEmail(),
+                                        user.getPostsCount(),
+                                        user.getFollowerCount(),
+                                        user.getFollowingCount());
+                }
+
+                // Trước tiên, tìm kiếm trong training data
+                List<ChatbotTrainingData> allTrainingData = trainingDataRepository.findAll();
+                String bestMatch = findBestMatch(message, allTrainingData);
+                if (bestMatch != null) {
+                        // Lưu lịch sử chat
+                        saveChat(user, message, bestMatch);
+                        return bestMatch;
+                }
 
                 // Xử lý câu hỏi về bài viết của người dùng
                 if (message != null && (message.toLowerCase().contains("đăng bài") ||
@@ -125,7 +216,7 @@ public class ChatbotService {
                 if (message != null && (message.toLowerCase().contains("mục tiêu") ||
                                 message.toLowerCase().contains("learning goal"))) {
 
-                        List<LearningGoal> goals = learningGoalRepository.findByUserOrderByCreatedAtDesc(user);
+                        List<LearningGoal> goals = learningGoalRepository.findByUserIdOrderByCreatedAtDesc(userId);
                         if (goals.isEmpty()) {
                                 return "Bạn chưa đặt mục tiêu học tập nào.";
                         }
@@ -153,8 +244,13 @@ public class ChatbotService {
                 if (message != null && (message.toLowerCase().contains("tài liệu") ||
                                 message.toLowerCase().contains("document"))) {
 
-                        List<DocumentUser> documents = user.getSavedDocuments();
-                        if (documents == null || documents.isEmpty()) {
+                        List<String> savedDocIds = user.getSavedDocuments();
+                        if (savedDocIds == null || savedDocIds.isEmpty()) {
+                                return "Bạn chưa lưu tài liệu nào.";
+                        }
+
+                        List<DocumentUser> documents = documentRepository.findAllById(savedDocIds);
+                        if (documents.isEmpty()) {
                                 return "Bạn chưa lưu tài liệu nào.";
                         }
 
@@ -182,7 +278,7 @@ public class ChatbotService {
 
         private void saveChat(User user, String message, String response) {
                 Chatbot newChat = new Chatbot();
-                newChat.setUser(user);
+                newChat.setUserId(user.getId());
                 newChat.setHistory(List.of(
                                 new ChatHistory("user", List.of(new ChatHistory.ChatPart(message))),
                                 new ChatHistory("model", List.of(new ChatHistory.ChatPart(response)))));
@@ -192,9 +288,7 @@ public class ChatbotService {
         }
 
         public List<Chatbot> getChats(String userId) {
-                User user = userRepository.findById(userId)
-                                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
-                return chatbotRepository.findByUserOrderByCreatedAtDesc(user);
+                return chatbotRepository.findByUserIdOrderByCreatedAtDesc(userId);
         }
 
         public Chatbot getChatItem(String userId, String chatId) {
@@ -212,7 +306,7 @@ public class ChatbotService {
                 Chatbot chat = chatbotRepository.findById(chatId)
                                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy cuộc hội thoại"));
 
-                if (!chat.getUser().getId().equals(userId)) {
+                if (!chat.getUserId().equals(userId)) {
                         throw new IllegalArgumentException("Không có quyền cập nhật cuộc hội thoại này");
                 }
 
@@ -233,15 +327,27 @@ public class ChatbotService {
 
         @Transactional
         public void deleteChatHistory(String userId) {
-                User user = userRepository.findById(userId)
-                                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
-                chatbotRepository.deleteByUser(user);
+                chatbotRepository.deleteByUserId(userId);
         }
 
         public List<Chatbot> getChatHistory(String userId) {
-                User user = userRepository.findById(userId)
-                                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
-                return chatbotRepository.findByUserOrderByCreatedAtDesc(user);
+                List<Chatbot> chats = chatbotRepository.findByUserIdOrderByCreatedAtDesc(userId);
+                // Đảo ngược thứ tự tin nhắn trong mỗi chat để tin nhắn mới nhất hiển thị cuối
+                // cùng
+                chats.forEach(chat -> {
+                        if (chat.getHistory() != null) {
+                                List<ChatHistory> history = chat.getHistory();
+                                List<ChatHistory> orderedHistory = new ArrayList<>();
+                                for (int i = 0; i < history.size(); i += 2) {
+                                        if (i + 1 < history.size()) {
+                                                orderedHistory.add(history.get(i));
+                                                orderedHistory.add(history.get(i + 1));
+                                        }
+                                }
+                                chat.setHistory(orderedHistory);
+                        }
+                });
+                return chats;
         }
 
         // Thêm các phương thức quản lý training data
@@ -262,19 +368,73 @@ public class ChatbotService {
                 return trainingDataRepository.findByCategory(category);
         }
 
-        private List<String> extractKeywords(String message) {
-                // Implement logic để trích xuất từ khóa từ message
-                // Có thể sử dụng thư viện NLP như Stanford NLP hoặc OpenNLP
-                return Arrays.asList(message.toLowerCase().split("\\s+"));
-        }
-
         private String findBestMatch(String message, List<ChatbotTrainingData> matches) {
-                // Implement thuật toán Levenshtein distance để tìm câu trả lời phù hợp nhất
+                if (matches == null || matches.isEmpty()) {
+                        return null;
+                }
+
+                // Chuẩn hóa message
+                String normalizedMessage = message.toLowerCase().trim();
+
+                // Tìm kiếm chính xác
+                for (ChatbotTrainingData match : matches) {
+                        if (match.getQuestion().toLowerCase().trim().equals(normalizedMessage)) {
+                                return match.getAnswer();
+                        }
+                }
+
+                // Tìm kiếm theo từ khóa
+                List<String> messageKeywords = extractKeywords(normalizedMessage);
+                int maxKeywordMatches = 0;
+                ChatbotTrainingData bestMatch = null;
+
+                for (ChatbotTrainingData match : matches) {
+                        List<String> matchKeywords = match.getKeywords();
+                        if (matchKeywords != null) {
+                                int keywordMatches = 0;
+                                for (String keyword : messageKeywords) {
+                                        if (matchKeywords.contains(keyword)) {
+                                                keywordMatches++;
+                                        }
+                                }
+                                if (keywordMatches > maxKeywordMatches) {
+                                        maxKeywordMatches = keywordMatches;
+                                        bestMatch = match;
+                                }
+                        }
+                }
+
+                // Nếu có ít nhất 2 từ khóa khớp, trả về câu trả lời
+                if (maxKeywordMatches >= 2 && bestMatch != null) {
+                        return bestMatch.getAnswer();
+                }
+
+                // Nếu không tìm thấy kết quả tốt, sử dụng Levenshtein distance
                 return matches.stream()
                                 .min(Comparator.comparingInt(match -> calculateLevenshteinDistance(
-                                                message.toLowerCase(), match.getQuestion().toLowerCase())))
+                                                normalizedMessage, match.getQuestion().toLowerCase())))
+                                .filter(match -> calculateLevenshteinDistance(normalizedMessage,
+                                                match.getQuestion().toLowerCase()) < 10)
                                 .map(ChatbotTrainingData::getAnswer)
                                 .orElse(null);
+        }
+
+        private List<String> extractKeywords(String message) {
+                // Loại bỏ các từ không cần thiết
+                String[] stopWords = { "là", "gì", "có", "không", "để", "làm", "sao", "thế", "nào", "cho", "tôi", "bạn",
+                                "của", "và", "hoặc", "với", "trong", "ngoài", "trên", "dưới", "trước", "sau" };
+                List<String> keywords = new ArrayList<>();
+
+                // Tách từ và lọc stop words
+                String[] words = message.split("\\s+");
+                for (String word : words) {
+                        word = word.toLowerCase().trim();
+                        if (!Arrays.asList(stopWords).contains(word) && word.length() > 1) {
+                                keywords.add(word);
+                        }
+                }
+
+                return keywords;
         }
 
         private int calculateLevenshteinDistance(String s1, String s2) {

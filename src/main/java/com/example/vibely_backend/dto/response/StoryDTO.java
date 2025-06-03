@@ -35,10 +35,11 @@ public class StoryDTO {
 
         // Map reactions if present
         if (story.getReactions() != null) {
-            this.reactions = story.getReactions().stream().map(r -> new Reaction(
-                    new UserMiniDTO(r.getUser()),
-                    r.getCreatedAt()
-            )).collect(Collectors.toList());
+            this.reactions = story.getReactions().stream()
+                    .map(r -> new Reaction(
+                            r.getUserId(),
+                            r.getCreatedAt()))
+                    .collect(Collectors.toList());
         }
 
         // Map reactionStats if present
@@ -54,7 +55,7 @@ public class StoryDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Reaction {
-        private UserMiniDTO user;
+        private String userId; // Changed from UserMiniDTO to String
         private Date createdAt;
     }
 
@@ -65,4 +66,4 @@ public class StoryDTO {
     public static class ReactionStats {
         private int tym;
     }
-} 
+}

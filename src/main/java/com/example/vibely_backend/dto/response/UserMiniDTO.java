@@ -11,11 +11,17 @@ public class UserMiniDTO {
     private String profilePicture;
 
     public UserMiniDTO(User user) {
-        if (user == null) return; // hoặc throw exception nếu cần
+        if (user == null)
+            return; // hoặc throw exception nếu cần
 
         this.id = user.getId();
         this.email = user.getEmail();
         this.username = user.getUsername();
         this.profilePicture = user.getProfilePicture();
+    }
+
+    public UserMiniDTO(String userId) {
+        this.id = userId;
+        // Các thông tin khác sẽ được set từ service layer
     }
 }

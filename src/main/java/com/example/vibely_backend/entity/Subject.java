@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import lombok.AllArgsConstructor;
@@ -23,8 +22,7 @@ public class Subject {
 
     private String name;
 
-    @DBRef
-    private Level level;
+    private String levelId;
 
     @CreatedDate
     private LocalDateTime createdAt;

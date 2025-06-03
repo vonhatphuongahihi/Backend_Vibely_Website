@@ -56,7 +56,9 @@ public class SecurityConfig {
                                                                 "/forgot-password/**",
                                                                 "/oauth2/**", "/login/**", "/schedules/**", "/users/**",
                                                                 "/quotations/**", "/quizzes/**", "/learning-trees/**",
-                                                                "/learning-goals/**", "/chatbot/**")
+                                                                "/learning-goals/**", "/chatbot/**",
+                                                                "/google-calendar/auth-url",
+                                                                "/google-calendar/oauth2callback")
                                                 .permitAll()
                                                 .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                                                 .anyRequest().authenticated())
@@ -113,9 +115,12 @@ public class SecurityConfig {
                 configuration.setAllowedOrigins(Arrays.asList(
                                 "http://localhost:3001",
                                 "http://localhost:3000",
+                                "http://localhost:3002",
                                 "http://127.0.0.1:3001",
                                 "http://127.0.0.1:3000",
-                                "http://localhost:3000"));
+                                "http://127.0.0.1:3002",
+                                "https://vibely-study-social-website.vercel.app",
+                                "https://vibely-study-social-admin-website.vercel.app"));
                 configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
                 configuration.setAllowedHeaders(Arrays.asList(
                                 "Authorization",

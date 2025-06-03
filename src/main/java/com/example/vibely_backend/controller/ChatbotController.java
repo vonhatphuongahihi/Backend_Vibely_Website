@@ -81,17 +81,32 @@ public class ChatbotController {
                 "message", "Lấy lịch sử chat thành công"));
     }
 
-    @PostMapping(value = "/handleMessage", consumes = { MediaType.APPLICATION_JSON_VALUE,
-            MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ResponseEntity<?> handleMessage(@RequestParam(required = false) String message) {
-        if (message == null || message.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Tin nhắn không được để trống");
-        }
+    @PostMapping(value = "/handleMessage", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> handleMessage(@RequestBody Map<String, String> request) {
+        try {
+            String message = request.get("message");
+            int maxLength = Integer.parseInt(request.getOrDefault("maxLength", "1000"));
 
-        String response = chatbotService.handleMessage(getUserId(), message);
-        return ResponseEntity.ok(Map.of(
-                "message", response,
-                "timestamp", System.currentTimeMillis()));
+            if (message == null || message.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Tin nhắn không được để trống"));
+            }
+
+            // Đảm bảo tin nhắn không vượt quá maxLength
+            if (message.length() > maxLength) {
+                message = message.substring(0, maxLength);
+            }
+
+            String userId = getUserId();
+            String response = chatbotService.handleMessage(userId, message);
+            return ResponseEntity.ok(Map.of(
+                    "message", response,
+                    "timestamp", System.currentTimeMillis()));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "error", "Unauthorized",
+                    "message", e.getMessage()));
+        }
     }
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

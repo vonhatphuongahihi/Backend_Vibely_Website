@@ -1,5 +1,6 @@
 package com.example.vibely_backend.controller;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -8,9 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,7 +44,8 @@ import com.example.vibely_backend.service.UserService;
 @CrossOrigin(origins = {
         "http://localhost:3001", "http://localhost:3000",
         "http://127.0.0.1:3001", "http://127.0.0.1:3000",
-        "https://vibely-study-social-website.vercel.app"
+        "https://vibely-study-social-website.vercel.app",
+        "https://vibely-study-social-admin-website.vercel.app"
 })
 public class UserController {
 
@@ -98,11 +97,8 @@ public class UserController {
             @RequestPart(value = "coverPicture", required = false) MultipartFile coverPicture) {
         try {
             String userId = getUserIdFromAuthHeader(authHeader);
-
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-
-            Bio currentBio = user.getBio();
 
             if (profilePicture != null && !profilePicture.isEmpty()) {
                 if (!profilePicture.getContentType().startsWith("image/")) {
@@ -130,8 +126,6 @@ public class UserController {
             if (request.getDateOfBirth() != null)
                 user.setDateOfBirth(request.getDateOfBirth());
 
-            user.setBio(currentBio);
-
             userRepository.save(user);
             UserInfoResponse userReponse = userService.convertToUserInfoResponse(user);
 
@@ -153,9 +147,9 @@ public class UserController {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-            Bio bio = bioRepository.findByUser(user).orElseGet(() -> {
+            Bio bio = bioRepository.findByUserId(userId).orElseGet(() -> {
                 Bio newBio = new Bio();
-                newBio.setUser(user);
+                newBio.setUserId(userId);
                 newBio.setCreatedAt(new Date());
                 return newBio;
             });
@@ -174,12 +168,7 @@ public class UserController {
                 bio.setHometown(bioRequest.getHometown());
 
             bio.setUpdatedAt(new Date());
-
             Bio savedBio = bioRepository.save(bio);
-
-            Query query = new Query(Criteria.where("_id").is(userId));
-            Update update = new Update().set("bio", savedBio);
-            mongoTemplate.updateFirst(query, update, User.class);
 
             return ResponseEntity.ok(new ApiResponse("success", "Cập nhật tiểu sử thành công", savedBio));
         } catch (Exception e) {
@@ -254,5 +243,65 @@ public class UserController {
     @DeleteMapping("/saved/{id}")
     public ResponseEntity<ApiResponse> unsaveDocument(@PathVariable String id) {
         return ResponseEntity.ok(userService.unsaveDocument(id));
+    }
+
+    // Google Calendar endpoints
+    @PostMapping("/google-calendar/connect")
+    public ResponseEntity<ApiResponse> connectGoogleCalendar(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> tokens) {
+        try {
+            String userId = getUserIdFromAuthHeader(authHeader);
+            String accessToken = tokens.get("accessToken");
+            String refreshToken = tokens.get("refreshToken");
+            LocalDateTime expiry = LocalDateTime.parse(tokens.get("expiry"));
+
+            userService.saveGoogleCalendarTokens(userId, accessToken, refreshToken, expiry);
+            return ResponseEntity.ok(new ApiResponse("success", "Google Calendar connected successfully", null));
+        } catch (Exception e) {
+            logger.error("Error connecting Google Calendar", e);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Failed to connect Google Calendar", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/google-calendar/disconnect")
+    public ResponseEntity<ApiResponse> disconnectGoogleCalendar(
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = getUserIdFromAuthHeader(authHeader);
+            userService.disconnectGoogleCalendar(userId);
+            return ResponseEntity.ok(new ApiResponse("success", "Google Calendar disconnected successfully", null));
+        } catch (Exception e) {
+            logger.error("Error disconnecting Google Calendar", e);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Failed to disconnect Google Calendar", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/google-calendar/status")
+    public ResponseEntity<ApiResponse> getGoogleCalendarStatus(
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String userId = getUserIdFromAuthHeader(authHeader);
+            boolean isConnected = userService.isGoogleCalendarConnected(userId);
+            return ResponseEntity.ok(new ApiResponse("success", "Google Calendar status retrieved", isConnected));
+        } catch (Exception e) {
+            logger.error("Error getting Google Calendar status", e);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Failed to get Google Calendar status", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/info/{userId}")
+    public ResponseEntity<?> getUserInfo(@PathVariable String userId) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy thông tin user thành công", user));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Lỗi khi lấy thông tin user", e.getMessage()));
+        }
     }
 }

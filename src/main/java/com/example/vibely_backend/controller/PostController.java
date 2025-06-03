@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +103,7 @@ public class PostController {
 
             // Tạo bài viết mới với các thông số ban đầu
             Post newPost = new Post();
-            newPost.setUser(user);
+            newPost.setUserId(user.getId());
             newPost.setContent(content);
             newPost.setMediaUrl(mediaUrl);
             newPost.setMediaType(mediaType);
@@ -131,7 +132,7 @@ public class PostController {
     }
 
     // Tạo story
-    @PostMapping("/story") 
+    @PostMapping("/story")
     public ResponseEntity<?> createStory(@RequestParam("file") MultipartFile file) {
         System.out.println("createStorycreateStorycreateStorycreateStorycreateStorycreateStory: " + file);
         try {
@@ -164,7 +165,7 @@ public class PostController {
             }
             Story newStory = new Story();
 
-            newStory.setUser(user);
+            newStory.setUserId(user.getId());
             newStory.setMediaUrl((String) uploadResult.get("secure_url"));
             newStory.setMediaType(isVideo ? "video" : "image");
             newStory.setCreatedAt(new Date());
@@ -179,7 +180,7 @@ public class PostController {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Tạo story thất bại", e.getMessage());
         }
     }
-    
+
     @GetMapping("/posts")
     public ResponseEntity<?> getAllPosts() {
         try {
@@ -196,7 +197,17 @@ public class PostController {
     public ResponseEntity<?> getAllStories() {
         try {
             List<StoryDTO> stories = storyService.getAllStories();
-            stories.sort((s1, s2) -> s2.getCreatedAt().compareTo(s1.getCreatedAt()));
+            stories.sort((s1, s2) -> {
+                Date date1 = s1.getCreatedAt();
+                Date date2 = s2.getCreatedAt();
+                if (date1 == null && date2 == null)
+                    return 0;
+                if (date1 == null)
+                    return 1;
+                if (date2 == null)
+                    return -1;
+                return date2.compareTo(date1);
+            });
             return ResponseHandler.response(HttpStatus.OK, "Lấy tất cả story thành công", stories);
         } catch (Exception e) {
             e.printStackTrace();
@@ -246,14 +257,14 @@ public class PostController {
 
             // This variable is used in the response message
             String action = processReaction(post, existingReactionIndex, type, user);
-            
+
             // Cập nhật reactionCount
             if (post.getReactions() != null) {
                 post.setReactionCount(post.getReactions().size());
             } else {
                 post.setReactionCount(0);
             }
-            
+
             post.setUpdatedAt(new Date());
 
             logger.info("Logging updated post: " + post);
@@ -267,7 +278,8 @@ public class PostController {
             return ResponseHandler.response(HttpStatus.OK, action, responseData);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thích bài viết thất bại", e.getMessage());
+            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thích bài viết thất bại",
+                    e.getMessage());
         }
     }
 
@@ -275,28 +287,25 @@ public class PostController {
         if (post.getReactions() == null || userId == null) {
             return -1;
         }
-    
+
         for (int i = 0; i < post.getReactions().size(); i++) {
             Post.Reaction reaction = post.getReactions().get(i);
-            User user = reaction.getUser();
-    
-            if (user != null && userId.equals(user.getId())) {
+            if (userId.equals(reaction.getUserId())) {
                 return i;
             }
         }
-    
+
         return -1;
     }
 
-    
     private String processReaction(Post post, int existingReactionIndex, String type, User user) {
         String action;
-    
+
         if (existingReactionIndex != -1) {
             // Người dùng đã từng react
             Post.Reaction existingReaction = post.getReactions().get(existingReactionIndex);
             String oldType = existingReaction.getType();
-    
+
             if (oldType.equalsIgnoreCase(type)) {
                 // Bấm lại cùng 1 loại => bỏ react
                 post.getReactions().remove(existingReactionIndex);
@@ -315,43 +324,66 @@ public class PostController {
             if (post.getReactions() == null) {
                 post.setReactions(new ArrayList<>());
             }
-    
+
             Post.Reaction newReaction = new Post.Reaction();
-            newReaction.setUser(user);
+            newReaction.setUserId(user.getId());
             newReaction.setType(type);
             newReaction.setCreatedAt(new Date());
-    
+
             post.getReactions().add(newReaction);
             incrementReactionStat(post, type);
             action = "Đã " + type + " bài viết";
         }
-    
+
         return action;
     }
-    
+
     private void incrementReactionStat(Post post, String type) {
         switch (type.toLowerCase()) {
-            case "like": post.getReactionStats().setLike(post.getReactionStats().getLike() + 1); break;
-            case "love": post.getReactionStats().setLove(post.getReactionStats().getLove() + 1); break;
-            case "haha": post.getReactionStats().setHaha(post.getReactionStats().getHaha() + 1); break;
-            case "wow": post.getReactionStats().setWow(post.getReactionStats().getWow() + 1); break;
-            case "sad": post.getReactionStats().setSad(post.getReactionStats().getSad() + 1); break;
-            case "angry": post.getReactionStats().setAngry(post.getReactionStats().getAngry() + 1); break;
-        }
-    }
-    
-    private void decrementReactionStat(Post post, String type) {
-        switch (type.toLowerCase()) {
-            case "like": post.getReactionStats().setLike(Math.max(0, post.getReactionStats().getLike() - 1)); break;
-            case "love": post.getReactionStats().setLove(Math.max(0, post.getReactionStats().getLove() - 1)); break;
-            case "haha": post.getReactionStats().setHaha(Math.max(0, post.getReactionStats().getHaha() - 1)); break;
-            case "wow": post.getReactionStats().setWow(Math.max(0, post.getReactionStats().getWow() - 1)); break;
-            case "sad": post.getReactionStats().setSad(Math.max(0, post.getReactionStats().getSad() - 1)); break;
-            case "angry": post.getReactionStats().setAngry(Math.max(0, post.getReactionStats().getAngry() - 1)); break;
+            case "like":
+                post.getReactionStats().setLike(post.getReactionStats().getLike() + 1);
+                break;
+            case "love":
+                post.getReactionStats().setLove(post.getReactionStats().getLove() + 1);
+                break;
+            case "haha":
+                post.getReactionStats().setHaha(post.getReactionStats().getHaha() + 1);
+                break;
+            case "wow":
+                post.getReactionStats().setWow(post.getReactionStats().getWow() + 1);
+                break;
+            case "sad":
+                post.getReactionStats().setSad(post.getReactionStats().getSad() + 1);
+                break;
+            case "angry":
+                post.getReactionStats().setAngry(post.getReactionStats().getAngry() + 1);
+                break;
         }
     }
 
-    
+    private void decrementReactionStat(Post post, String type) {
+        switch (type.toLowerCase()) {
+            case "like":
+                post.getReactionStats().setLike(Math.max(0, post.getReactionStats().getLike() - 1));
+                break;
+            case "love":
+                post.getReactionStats().setLove(Math.max(0, post.getReactionStats().getLove() - 1));
+                break;
+            case "haha":
+                post.getReactionStats().setHaha(Math.max(0, post.getReactionStats().getHaha() - 1));
+                break;
+            case "wow":
+                post.getReactionStats().setWow(Math.max(0, post.getReactionStats().getWow() - 1));
+                break;
+            case "sad":
+                post.getReactionStats().setSad(Math.max(0, post.getReactionStats().getSad() - 1));
+                break;
+            case "angry":
+                post.getReactionStats().setAngry(Math.max(0, post.getReactionStats().getAngry() - 1));
+                break;
+        }
+    }
+
     // Thả tym story
     @PostMapping("/story/react/{storyId}")
     public ResponseEntity<?> reactStory(@PathVariable String storyId) {
@@ -379,7 +411,7 @@ public class PostController {
             int existingReactionIndex = -1;
             if (story.getReactions() != null) {
                 for (int i = 0; i < story.getReactions().size(); i++) {
-                    if (story.getReactions().get(i).getUser().getId().equals(user.getId())) {
+                    if (story.getReactions().get(i).getUserId().equals(user.getId())) {
                         existingReactionIndex = i;
                         break;
                     }
@@ -397,7 +429,7 @@ public class PostController {
             } else {
                 // Nếu chưa tym => thêm tym
                 Story.Reaction newStoryReaction = new Story.Reaction();
-                newStoryReaction.setUser(user);
+                newStoryReaction.setUserId(user.getId());
                 newStoryReaction.setCreatedAt(new Date());
                 story.getReactions().add(newStoryReaction);
                 story.getReactionStats().setTym(story.getReactionStats().getTym() + 1);
@@ -414,6 +446,7 @@ public class PostController {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Thả tym story thất bại", e.getMessage());
         }
     }
+
     // Xóa story
     @DeleteMapping("/story/{storyId}")
     public ResponseEntity<?> deleteStory(@PathVariable String storyId) {
@@ -433,7 +466,7 @@ public class PostController {
             Story story = storyOpt.get();
 
             // Kiểm tra xem người dùng có phải là người tạo story không
-            if (!story.getUser().getId().equals(user.getId())) {
+            if (!story.getUserId().equals(user.getId())) {
                 return ResponseHandler.response(HttpStatus.FORBIDDEN, "Bạn không có quyền xóa story này");
             }
 
@@ -445,6 +478,7 @@ public class PostController {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Xóa story thất bại", e.getMessage());
         }
     }
+
     // Bình luận bài viết
     @PostMapping("/posts/comments/{postId}")
     public ResponseEntity<?> addCommentToPost(@PathVariable String postId, @RequestBody Map<String, String> body) {
@@ -470,7 +504,7 @@ public class PostController {
             User user = userRepository.findByEmail(userEmail)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            newComment.setUser(user);
+            newComment.setUserId(user.getId());
             newComment.setText(text);
             newComment.setCreatedAt(new Date());
 
@@ -496,9 +530,7 @@ public class PostController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = authentication.getName();
             String commentId = body.get("commentId");
-            String replyText = body.get("replyText");
-
-            System.out.println("====STEP 0=====: " + commentId);
+            String text = body.get("text");
 
             Optional<Post> postOpt = postRepository.findById(postId);
             if (postOpt.isEmpty()) {
@@ -506,8 +538,6 @@ public class PostController {
             }
 
             Post post = postOpt.get();
-
-            System.out.println("====STEP 0.1=====: " + post.getComments());
             if (post.getComments() == null) {
                 post.setComments(new ArrayList<>());
             }
@@ -534,16 +564,24 @@ public class PostController {
             User user = userRepository.findByEmail(userEmail)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            newReply.setUser(user);
-            newReply.setText(replyText);
+            newReply.setId(UUID.randomUUID().toString());
+            newReply.setUserId(user.getId());
+            newReply.setText(text);
             newReply.setCreatedAt(new Date());
 
             comment.getReplies().add(newReply);
             post.setUpdatedAt(new Date());
 
-            newReply.setId(UUID.randomUUID().toString());
             Post updatedPost = postRepository.save(post);
-            return ResponseHandler.response(HttpStatus.CREATED, "Phản hồi bình luận thành công", updatedPost);
+
+            // Trả về thông tin reply mới với user_id
+            Map<String, Object> replyData = new HashMap<>();
+            replyData.put("id", newReply.getId());
+            replyData.put("user_id", newReply.getUserId());
+            replyData.put("text", newReply.getText());
+            replyData.put("created_at", newReply.getCreatedAt());
+
+            return ResponseHandler.response(HttpStatus.CREATED, "Phản hồi bình luận thành công", replyData);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Phản hồi bình luận thất bại",
                     e.getMessage());
@@ -564,30 +602,22 @@ public class PostController {
 
             Post post = postOpt.get();
 
-            System.out.println("====STEP 0.1=====: " + post.getShare());
             if (post.getShare() == null) {
                 post.setShare(new ArrayList<>());
             }
 
-            // Kiểm tra xem user đã share chưa
-            boolean hasShared = false;
-            for (com.example.vibely_backend.entity.User user : post.getShare()) {
-                if (user.getId().equals(userEmail)) {
-                    hasShared = true;
-                    break;
-                }
-            }
-
-            if (!hasShared) {
-                // Get the user by email
-                User user = userRepository.findByEmail(userEmail)
+            // Get the user by email
+            User user = userRepository.findByEmail(userEmail)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-                post.getShare().add(user);
-            }
+            // Kiểm tra xem user đã share chưa
+            boolean hasShared = post.getShare().contains(user.getId());
 
-            post.setShareCount(post.getShareCount() + 1);
-            post.setUpdatedAt(new Date());
+            if (!hasShared) {
+                post.getShare().add(user.getId());
+                post.setShareCount(post.getShareCount() + 1);
+                post.setUpdatedAt(new Date());
+            }
 
             Post updatedPost = postRepository.save(post);
             return ResponseHandler.response(HttpStatus.OK, "Chia sẻ bài viết thành công", updatedPost);
@@ -728,7 +758,7 @@ public class PostController {
     // Chỉnh sửa bài viết
     @PutMapping("/posts/edit/{postId}")
     public ResponseEntity<?> editPost(
-            @PathVariable String postId, 
+            @PathVariable String postId,
             @RequestParam(required = false) String content,
             @RequestParam(required = false) MultipartFile file,
             @RequestParam(required = false, defaultValue = "false") boolean removeMedia) {
@@ -738,7 +768,7 @@ public class PostController {
         System.out.println("File: " + (file != null ? file.getOriginalFilename() : "null"));
         System.out.println("File size: " + (file != null ? file.getSize() : "null"));
         System.out.println("Remove Media: " + removeMedia);
-        
+
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = authentication.getName();
@@ -756,7 +786,7 @@ public class PostController {
             System.out.println("====Existing Post Media Type BEFORE=====: " + existingPost.getMediaType());
 
             // Kiểm tra xem người dùng có phải là chủ bài viết không
-            if (!existingPost.getUser().getId().equals(user.getId())) {
+            if (!existingPost.getUserId().equals(user.getId())) {
                 return ResponseHandler.response(HttpStatus.FORBIDDEN, "Bạn không có quyền chỉnh sửa bài viết này");
             }
 
@@ -783,7 +813,7 @@ public class PostController {
             } else if (file != null && !file.isEmpty()) {
                 System.out.println("====Uploading new file=====");
                 System.out.println("File content type: " + file.getContentType());
-                
+
                 // Upload file mới
                 Map<String, Object> uploadResult = null;
                 try {
@@ -792,12 +822,14 @@ public class PostController {
                 } catch (IOException uploadException) {
                     System.out.println("====Upload failed=====: " + uploadException.getMessage());
                     uploadException.printStackTrace();
-                    return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Lỗi khi tải lên tệp mới: " + uploadException.getMessage());
+                    return ResponseHandler.response(HttpStatus.BAD_REQUEST,
+                            "Lỗi khi tải lên tệp mới: " + uploadException.getMessage());
                 }
-                
+
                 if (uploadResult == null || !uploadResult.containsKey("secure_url")) {
                     System.out.println("====Upload result is null or missing secure_url=====");
-                    return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Lỗi khi tải lên tệp mới - không nhận được URL");
+                    return ResponseHandler.response(HttpStatus.BAD_REQUEST,
+                            "Lỗi khi tải lên tệp mới - không nhận được URL");
                 }
 
                 // Xóa file cũ nếu có (optional - có thể bỏ comment để tiết kiệm storage)
@@ -814,39 +846,40 @@ public class PostController {
                 String mediaUrl = (String) uploadResult.get("secure_url");
                 String contentType = file.getContentType();
                 String mediaType = (contentType != null && contentType.startsWith("video")) ? "video" : "image";
-                
+
                 System.out.println("====Setting new media URL=====: " + mediaUrl);
                 System.out.println("====Setting new media type=====: " + mediaType);
-                
+
                 existingPost.setMediaUrl(mediaUrl);
                 existingPost.setMediaType(mediaType);
-                
+
                 System.out.println("====Post media URL AFTER setting=====: " + existingPost.getMediaUrl());
                 System.out.println("====Post media type AFTER setting=====: " + existingPost.getMediaType());
             }
 
             // Kiểm tra bài viết có content hoặc media
-            if ((existingPost.getContent() == null || existingPost.getContent().trim().isEmpty()) && 
-                existingPost.getMediaUrl() == null) {
+            if ((existingPost.getContent() == null || existingPost.getContent().trim().isEmpty()) &&
+                    existingPost.getMediaUrl() == null) {
                 return ResponseHandler.response(HttpStatus.BAD_REQUEST, "Bài viết phải có nội dung hoặc đính kèm file");
             }
 
             existingPost.setUpdatedAt(new Date());
-            
+
             System.out.println("====Saving post with media URL=====: " + existingPost.getMediaUrl());
             System.out.println("====Saving post with media type=====: " + existingPost.getMediaType());
-            
+
             Post savedPost = postRepository.save(existingPost);
-            
+
             System.out.println("====Saved post media URL=====: " + savedPost.getMediaUrl());
             System.out.println("====Saved post media type=====: " + savedPost.getMediaType());
             System.out.println("====Saved post ID=====: " + savedPost.getId());
-            
+
             return ResponseHandler.response(HttpStatus.OK, "Chỉnh sửa bài viết thành công", savedPost);
         } catch (Exception e) {
             System.out.println("====Exception during edit=====: " + e.getMessage());
             e.printStackTrace();
-            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Chỉnh sửa bài viết thất bại: " + e.getMessage());
+            return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Chỉnh sửa bài viết thất bại: " + e.getMessage());
         }
     }
 
@@ -881,9 +914,8 @@ public class PostController {
             if (comment.getReactions() != null) {
                 for (int i = 0; i < comment.getReactions().size(); i++) {
                     Post.Reaction reaction = comment.getReactions().get(i);
-                    if (reaction != null && reaction.getUser() != null &&
-                            reaction.getUser().getId() != null &&
-                            reaction.getUser().getId().equals(user.getId())) {
+                    if (reaction != null && reaction.getUserId() != null &&
+                            reaction.getUserId().equals(user.getId())) {
                         existingReactionIndex = i;
                         break;
                     }
@@ -901,9 +933,7 @@ public class PostController {
             } else {
                 // Nếu chưa phản ứng => thêm phản ứng
                 Post.Reaction newCommentReaction = new Post.Reaction();
-                User commentReactionUser = new User();
-                commentReactionUser.setId(user.getId());
-                newCommentReaction.setUser(commentReactionUser);
+                newCommentReaction.setUserId(user.getId());
                 newCommentReaction.setType("like");
                 newCommentReaction.setCreatedAt(new Date());
                 comment.getReactions().add(newCommentReaction);
@@ -928,7 +958,7 @@ public class PostController {
             }
 
             Post post = postOpt.get();
-            
+
             System.out.println("====DEBUG POST=====");
             System.out.println("Post ID: " + post.getId());
             System.out.println("Post Content: " + post.getContent());
@@ -936,18 +966,17 @@ public class PostController {
             System.out.println("Post Media Type: " + post.getMediaType());
             System.out.println("Post Created At: " + post.getCreatedAt());
             System.out.println("Post Updated At: " + post.getUpdatedAt());
-            System.out.println("Post User: " + (post.getUser() != null ? post.getUser().getUsername() : "null"));
-            
+            System.out.println("Post User ID: " + post.getUserId());
+
             Map<String, Object> debugInfo = Map.of(
-                "id", post.getId(),
-                "content", post.getContent() != null ? post.getContent() : "null",
-                "mediaUrl", post.getMediaUrl() != null ? post.getMediaUrl() : "null",
-                "mediaType", post.getMediaType() != null ? post.getMediaType() : "null",
-                "createdAt", post.getCreatedAt(),
-                "updatedAt", post.getUpdatedAt(),
-                "userEmail", post.getUser() != null ? post.getUser().getEmail() : "null"
-            );
-            
+                    "id", post.getId(),
+                    "content", post.getContent() != null ? post.getContent() : "null",
+                    "mediaUrl", post.getMediaUrl() != null ? post.getMediaUrl() : "null",
+                    "mediaType", post.getMediaType() != null ? post.getMediaType() : "null",
+                    "createdAt", post.getCreatedAt(),
+                    "updatedAt", post.getUpdatedAt(),
+                    "userId", post.getUserId());
+
             return ResponseHandler.response(HttpStatus.OK, "Debug info", debugInfo);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Debug failed", e.getMessage());

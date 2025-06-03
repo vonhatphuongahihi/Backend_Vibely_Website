@@ -16,7 +16,7 @@ public class UserDTO {
     private int postsCount;
     private int followerCount;
     private int followingCount;
-    private String bioText;  // Thêm trường cho thông tin Bio cần thiết
+    private BioResponse bio;
 
     public UserDTO(User user) {
         this.id = user.getId();
@@ -29,10 +29,5 @@ public class UserDTO {
         this.postsCount = user.getPostsCount();
         this.followerCount = user.getFollowerCount();
         this.followingCount = user.getFollowingCount();
-
-        // Nếu có Bio, lấy thông tin cần thiết
-        if (user.getBio() != null) {
-            this.bioText = user.getBio().getBioText();
-        }
     }
 }
