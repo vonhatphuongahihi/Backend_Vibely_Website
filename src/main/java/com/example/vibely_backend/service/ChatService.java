@@ -37,6 +37,11 @@ public class ChatService {
         onlineUsers.add(userId);
     }
 
+    // Xóa user khỏi danh sách online
+    public void removeOnlineUser(String userId) {
+        onlineUsers.remove(userId);
+    }
+
     // Lấy danh sách user đang online
     public Set<String> getOnlineUsers() {
         return onlineUsers;
@@ -44,6 +49,7 @@ public class ChatService {
 
     // Gửi danh sách online cho từng user
     public void broadcastOnlineUsers() {
+        System.out.println("Broadcasting online users to " + onlineUsers.size() + " users");
         for (String userId : onlineUsers) {
             messagingTemplate.convertAndSendToUser(
                 userId,
@@ -51,5 +57,6 @@ public class ChatService {
                 onlineUsers.stream().map(id -> Map.of("userId", id)).toList()
             );
         }
+        System.out.println("Broadcast completed");
     }
 } 
