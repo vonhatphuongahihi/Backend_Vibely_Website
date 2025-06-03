@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -529,9 +530,7 @@ public class PostController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = authentication.getName();
             String commentId = body.get("commentId");
-            String replyText = body.get("replyText");
-
-            System.out.println("====STEP 0=====: " + commentId);
+            String text = body.get("text");
 
             Optional<Post> postOpt = postRepository.findById(postId);
             if (postOpt.isEmpty()) {
@@ -539,8 +538,6 @@ public class PostController {
             }
 
             Post post = postOpt.get();
-
-            System.out.println("====STEP 0.1=====: " + post.getComments());
             if (post.getComments() == null) {
                 post.setComments(new ArrayList<>());
             }
@@ -567,16 +564,24 @@ public class PostController {
             User user = userRepository.findByEmail(userEmail)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
+            newReply.setId(UUID.randomUUID().toString());
             newReply.setUserId(user.getId());
-            newReply.setText(replyText);
+            newReply.setText(text);
             newReply.setCreatedAt(new Date());
 
             comment.getReplies().add(newReply);
             post.setUpdatedAt(new Date());
 
-            newReply.setId(UUID.randomUUID().toString());
             Post updatedPost = postRepository.save(post);
-            return ResponseHandler.response(HttpStatus.CREATED, "Phản hồi bình luận thành công", updatedPost);
+
+            // Trả về thông tin reply mới với user_id
+            Map<String, Object> replyData = new HashMap<>();
+            replyData.put("id", newReply.getId());
+            replyData.put("user_id", newReply.getUserId());
+            replyData.put("text", newReply.getText());
+            replyData.put("created_at", newReply.getCreatedAt());
+
+            return ResponseHandler.response(HttpStatus.CREATED, "Phản hồi bình luận thành công", replyData);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Phản hồi bình luận thất bại",
                     e.getMessage());
