@@ -27,17 +27,21 @@ import org.springframework.stereotype.Service;
 import com.example.vibely_backend.dto.request.UserProfileUpdateRequest;
 import com.example.vibely_backend.dto.response.ApiResponse;
 import com.example.vibely_backend.dto.response.BioResponse;
+import com.example.vibely_backend.dto.response.DocumentResponse;
 import com.example.vibely_backend.dto.response.MutualFriendResponse;
 import com.example.vibely_backend.dto.response.SimpleUserResponse;
 import com.example.vibely_backend.dto.response.UserInfoResponse;
 import com.example.vibely_backend.dto.response.UserProfileResponse;
 import com.example.vibely_backend.entity.Bio;
 import com.example.vibely_backend.entity.DocumentUser;
-import com.example.vibely_backend.entity.Post;
+import com.example.vibely_backend.entity.Level;
 import com.example.vibely_backend.entity.Provider;
+import com.example.vibely_backend.entity.Subject;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.BioRepository;
 import com.example.vibely_backend.repository.DocumentRepository;
+import com.example.vibely_backend.repository.LevelRepository;
+import com.example.vibely_backend.repository.SubjectRepository;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
 
@@ -64,6 +68,12 @@ public class UserService {
 
     @Autowired
     private DocumentRepository documentRepository;
+
+    @Autowired
+    private LevelRepository levelRepository;
+
+    @Autowired
+    private SubjectRepository subjectRepository;
 
     @Autowired
     private CloudinaryService cloudinaryService;
@@ -533,14 +543,36 @@ public class UserService {
                         (subject == null || subject.isBlank() || doc.getSubjectId().equals(subject)))
                 .toList();
 
-        return new ApiResponse("success", "Lấy danh sách tài liệu đã lưu thành công", filteredDocs);
+        List<DocumentResponse> responses = filteredDocs.stream().map(doc -> {
+            Level levelRes = null;
+            Subject subjectRes = null;
+            if (doc.getLevelId() != null) {
+                levelRes = levelRepository.findById(doc.getLevelId()).orElse(null);
+            }
+            if (doc.getSubjectId() != null) {
+                subjectRes = subjectRepository.findById(doc.getSubjectId()).orElse(null);
+            }
+            return new DocumentResponse(
+                    doc.getId(),
+                    doc.getTitle(),
+                    doc.getPages(),
+                    doc.getFileType(),
+                    doc.getFileUrl(),
+                    levelRes != null ? levelRes.getId() : null,
+                    levelRes != null ? levelRes.getName() : null,
+                    subjectRes != null ? subjectRes.getId() : null,
+                    subjectRes != null ? subjectRes.getName() : null,
+                    doc.getUploadDate(),
+                    doc.getUpdatedAt());
+        }).collect(Collectors.toList());
+
+        return new ApiResponse("success", "Lấy danh sách tài liệu đã lưu thành công", responses);
     }
 
     public ApiResponse getSavedDocumentById(String documentId) {
         String userId = getCurrentUserId();
 
-        User user = userRepository.findById(userId)
-                .orElse(null);
+        User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             return new ApiResponse("error", "Người dùng không tồn tại", null);
         }
@@ -549,13 +581,38 @@ public class UserService {
             return new ApiResponse("error", "Tài liệu không tồn tại trong danh sách đã lưu", null);
         }
 
-        Optional<DocumentUser> doc = documentRepository.findById(documentId);
-        if (doc.isEmpty()) {
+        DocumentUser doc = documentRepository.findById(documentId).orElse(null);
+        if (doc == null) {
             return new ApiResponse("error", "Không tìm thấy tài liệu", null);
         }
 
-        return new ApiResponse("success", "Lấy thông tin tài liệu đã lưu thành công", doc.get());
+        Level level = null;
+        Subject subject = null;
+
+        if (doc.getLevelId() != null) {
+            level = levelRepository.findById(doc.getLevelId()).orElse(null);
+        }
+
+        if (doc.getSubjectId() != null) {
+            subject = subjectRepository.findById(doc.getSubjectId()).orElse(null);
+        }
+
+        DocumentResponse response = new DocumentResponse();
+        response.setId(doc.getId());
+        response.setTitle(doc.getTitle());
+        response.setPages(doc.getPages());
+        response.setFileType(doc.getFileType());
+        response.setFileUrl(doc.getFileUrl());
+        response.setLevelId(level != null ? level.getId() : null);
+        response.setLevelName(level != null ? level.getName() : null);
+        response.setSubjectId(subject != null ? subject.getId() : null);
+        response.setSubjectName(subject != null ? subject.getName() : null);
+        response.setUploadDate(doc.getUploadDate());
+        response.setUpdatedAt(doc.getUpdatedAt());
+
+        return new ApiResponse("success", "Lấy thông tin tài liệu đã lưu thành công", response);
     }
+
 
     public ApiResponse unsaveDocument(String documentId) {
         String userId = getCurrentUserId();

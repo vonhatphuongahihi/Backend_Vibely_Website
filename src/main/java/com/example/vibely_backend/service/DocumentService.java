@@ -8,12 +8,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.bson.types.ObjectId;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.stereotype.Service;
 
 import com.example.vibely_backend.dto.request.DocumentRequest;
@@ -139,11 +137,11 @@ public class DocumentService {
         List<Criteria> criteriaList = new ArrayList<>();
 
         if (levelId != null && !levelId.isBlank()) {
-            criteriaList.add(Criteria.where("level_id").is(levelId));
+            criteriaList.add(Criteria.where("levelId").is(levelId));
         }
 
         if (subjectId != null && !subjectId.isBlank()) {
-            criteriaList.add(Criteria.where("subject_id").is(subjectId));
+            criteriaList.add(Criteria.where("subjectId").is(subjectId));
         }
 
         if (query != null && !query.isBlank()) {
