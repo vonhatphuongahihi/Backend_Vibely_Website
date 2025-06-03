@@ -292,4 +292,16 @@ public class UserController {
                     .body(new ApiResponse("error", "Failed to get Google Calendar status", e.getMessage()));
         }
     }
+
+    @GetMapping("/info/{userId}")
+    public ResponseEntity<?> getUserInfo(@PathVariable String userId) {
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            return ResponseEntity.ok(new ApiResponse("success", "Lấy thông tin user thành công", user));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Lỗi khi lấy thông tin user", e.getMessage()));
+        }
+    }
 }

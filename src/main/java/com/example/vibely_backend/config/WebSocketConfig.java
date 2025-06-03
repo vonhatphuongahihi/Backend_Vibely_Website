@@ -35,22 +35,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
         registration.setMessageSizeLimit(8192) // 8KB
-                   .setSendBufferSizeLimit(512 * 1024) // 512KB
-                   .setSendTimeLimit(20000); // 20 seconds
+                .setSendBufferSizeLimit(512 * 1024) // 512KB
+                .setSendTimeLimit(20000); // 20 seconds
     }
 
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        
+
         // Allow all origins for development
         config.addAllowedOriginPattern("*");
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         config.setAllowCredentials(true);
-        
+
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
-} 
+}
