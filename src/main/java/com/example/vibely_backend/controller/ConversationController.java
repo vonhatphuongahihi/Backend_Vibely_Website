@@ -40,7 +40,28 @@ public class ConversationController {
             }
 
             Conversation conversation = conversationService.createOrGetConversation(senderId, receiverId);
-            return ResponseEntity.ok(conversation);
+            
+            // Tạo response tương tự như getUserConversations
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", conversation.getId());
+            result.put("members", conversation.getMembers());
+            result.put("lastMessage", conversation.getLastMessage());
+            result.put("lastMessageTime", conversation.getLastMessageTime());
+            result.put("color", conversation.getColor());
+            
+            // Lấy thông tin user cho từng member
+            List<Map<String, Object>> membersData = conversation.getMembers().stream().map(memberId -> {
+                User user = userRepository.findById(memberId).orElse(null);
+                if (user == null) return null;
+                Map<String, Object> u = new HashMap<>();
+                u.put("id", user.getId());
+                u.put("username", user.getUsername());
+                u.put("profilePicture", user.getProfilePicture());
+                return u;
+            }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
+            result.put("membersData", membersData);
+            
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Lỗi server: " + e.getMessage());
         }

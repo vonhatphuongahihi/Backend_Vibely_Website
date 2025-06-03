@@ -26,6 +26,11 @@ public class ChatController {
         String userId = (String) payload.get("userId");
         headerAccessor.getSessionAttributes().put("userId", userId);
         chatService.addOnlineUser(userId);
+        
+        System.out.println("User added to online list: " + userId);
+        System.out.println("Current online users count: " + chatService.getOnlineUsers().size());
+        System.out.println("Current online users: " + chatService.getOnlineUsers());
+        
         chatService.broadcastOnlineUsers();
     }
 
