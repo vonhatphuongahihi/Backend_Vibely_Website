@@ -360,12 +360,12 @@ public class UserService {
             return new ApiResponse("error", "Người gửi yêu cầu không tồn tại", null);
         }
 
-        if (!sender.getFollowings().contains(currentUser)) {
+        if (!sender.getFollowings().contains(currentUserId)) {
             return new ApiResponse("error", "Không tìm thấy yêu cầu kết bạn", null);
         }
 
-        sender.getFollowings().remove(currentUser);
-        currentUser.getFollowers().remove(sender);
+        sender.getFollowings().remove(currentUserId);
+        currentUser.getFollowers().remove(requestSenderId);
 
         currentUser.setFollowerCount(currentUser.getFollowers().size());
         sender.setFollowingCount(sender.getFollowings().size());
