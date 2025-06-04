@@ -569,6 +569,42 @@ public class UserService {
         return new ApiResponse("success", "Lấy danh sách tài liệu đã lưu thành công", responses);
     }
 
+    public ApiResponse getSavedDocumentsByUserId(String userId) {
+        User user = userRepository.findById(userId)
+                .orElse(null);
+        if (user == null) {
+            return new ApiResponse("error", "Người dùng không tồn tại", null);
+        }
+
+        // Lấy danh sách tài liệu đã lưu từ repository
+        List<DocumentUser> savedDocs = documentRepository.findAllById(user.getSavedDocuments());
+
+        List<DocumentResponse> responses = savedDocs.stream().map(doc -> {
+            Level levelRes = null;
+            Subject subjectRes = null;
+            if (doc.getLevelId() != null) {
+                levelRes = levelRepository.findById(doc.getLevelId()).orElse(null);
+            }
+            if (doc.getSubjectId() != null) {
+                subjectRes = subjectRepository.findById(doc.getSubjectId()).orElse(null);
+            }
+            return new DocumentResponse(
+                    doc.getId(),
+                    doc.getTitle(),
+                    doc.getPages(),
+                    doc.getFileType(),
+                    doc.getFileUrl(),
+                    levelRes != null ? levelRes.getId() : null,
+                    levelRes != null ? levelRes.getName() : null,
+                    subjectRes != null ? subjectRes.getId() : null,
+                    subjectRes != null ? subjectRes.getName() : null,
+                    doc.getUploadDate(),
+                    doc.getUpdatedAt());
+        }).collect(Collectors.toList());
+
+        return new ApiResponse("success", "Lấy danh sách tài liệu đã lưu thành công", responses);
+    }
+
     public ApiResponse getSavedDocumentById(String documentId) {
         String userId = getCurrentUserId();
 
