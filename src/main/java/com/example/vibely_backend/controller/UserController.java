@@ -235,6 +235,11 @@ public class UserController {
         return ResponseEntity.ok(userService.getSavedDocuments(query, level, subject));
     }
 
+    @GetMapping("/saved/user-profile/{userId}")
+    public ResponseEntity<ApiResponse> getSavedDocumentsByUserId(@PathVariable String userId) {
+        return ResponseEntity.ok(userService.getSavedDocumentsByUserId(userId));
+    }
+
     @GetMapping("/saved/{id}")
     public ResponseEntity<ApiResponse> getSavedDocumentById(@PathVariable String id) {
         return ResponseEntity.ok(userService.getSavedDocumentById(id));
