@@ -271,9 +271,31 @@ public class PostController {
 
             Post updatedPost = postRepository.save(post);
 
+            // Tạo response với thông tin user đầy đủ cho reactions
+            List<Map<String, Object>> reactionsWithUserInfo = new ArrayList<>();
+            if (updatedPost.getReactions() != null) {
+                for (Post.Reaction reaction : updatedPost.getReactions()) {
+                    Optional<User> reactionUser = userRepository.findById(reaction.getUserId());
+                    if (reactionUser.isPresent()) {
+                        Map<String, Object> reactionData = new HashMap<>();
+                        reactionData.put("type", reaction.getType());
+                        reactionData.put("createdAt", reaction.getCreatedAt());
+                        
+                        // Thông tin user đầy đủ
+                        Map<String, Object> userData = new HashMap<>();
+                        userData.put("id", reactionUser.get().getId());
+                        userData.put("username", reactionUser.get().getUsername());
+                        userData.put("profilePicture", reactionUser.get().getProfilePicture());
+                        reactionData.put("user", userData);
+                        
+                        reactionsWithUserInfo.add(reactionData);
+                    }
+                }
+            }
+
             Map<String, Object> responseData = Map.<String, Object>of(
                     "reactionStats", updatedPost.getReactionStats(),
-                    "reactions", updatedPost.getReactions());
+                    "reactions", reactionsWithUserInfo);
 
             return ResponseHandler.response(HttpStatus.OK, action, responseData);
         } catch (Exception e) {
@@ -504,6 +526,7 @@ public class PostController {
             User user = userRepository.findByEmail(userEmail)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
+            newComment.setId(UUID.randomUUID().toString());
             newComment.setUserId(user.getId());
             newComment.setText(text);
             newComment.setCreatedAt(new Date());
@@ -512,11 +535,20 @@ public class PostController {
             post.setCommentCount(post.getCommentCount() + 1);
             post.setUpdatedAt(new Date());
 
-            newComment.setId(UUID.randomUUID().toString());
             System.out.println("====STEP 0.1=====: " + newComment.getId());
 
             Post updatedPost = postRepository.save(post);
-            return ResponseHandler.response(HttpStatus.CREATED, "Bình luận bài viết thành công", updatedPost);
+
+            // Trả về thông tin comment mới với user_id
+            Map<String, Object> commentData = new HashMap<>();
+            commentData.put("id", newComment.getId());
+            commentData.put("user_id", newComment.getUserId());
+            commentData.put("text", newComment.getText());
+            commentData.put("createdAt", newComment.getCreatedAt());
+            commentData.put("reactions", new ArrayList<>());
+            commentData.put("replies", new ArrayList<>());
+
+            return ResponseHandler.response(HttpStatus.CREATED, "Bình luận bài viết thành công", commentData);
         } catch (Exception e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Bình luận bài viết thất bại",
                     e.getMessage());
