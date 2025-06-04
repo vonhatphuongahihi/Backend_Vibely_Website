@@ -124,7 +124,38 @@ public class PostController {
             newPost.setUpdatedAt(new Date());
 
             Post savedPost = postRepository.save(newPost);
-            return ResponseHandler.response(HttpStatus.CREATED, "Tạo bài viết thành công", savedPost);
+            
+            // Tạo PostDTO với thông tin user đầy đủ để trả về
+            UserMiniDTO userDTO = new UserMiniDTO(user);
+            PostDTO postDTO = new PostDTO();
+            postDTO.setId(savedPost.getId());
+            postDTO.setContent(savedPost.getContent());
+            postDTO.setMediaUrl(savedPost.getMediaUrl());
+            postDTO.setMediaType(savedPost.getMediaType());
+            postDTO.setReactionCount(savedPost.getReactionCount());
+            postDTO.setCommentCount(savedPost.getCommentCount());
+            postDTO.setShareCount(savedPost.getShareCount());
+            postDTO.setCreatedAt(savedPost.getCreatedAt());
+            postDTO.setUpdatedAt(savedPost.getUpdatedAt());
+            postDTO.setUser(userDTO);
+            
+            // Set reactionStats
+            if (savedPost.getReactionStats() != null) {
+                PostDTO.ReactionStats reactionStatsDTO = new PostDTO.ReactionStats();
+                reactionStatsDTO.setLike(savedPost.getReactionStats().getLike());
+                reactionStatsDTO.setLove(savedPost.getReactionStats().getLove());
+                reactionStatsDTO.setHaha(savedPost.getReactionStats().getHaha());
+                reactionStatsDTO.setWow(savedPost.getReactionStats().getWow());
+                reactionStatsDTO.setSad(savedPost.getReactionStats().getSad());
+                reactionStatsDTO.setAngry(savedPost.getReactionStats().getAngry());
+                postDTO.setReactionStats(reactionStatsDTO);
+            }
+            
+            // Set empty reactions và comments cho bài viết mới
+            postDTO.setReactions(new ArrayList<>());
+            postDTO.setComments(new ArrayList<>());
+            
+            return ResponseHandler.response(HttpStatus.CREATED, "Tạo bài viết thành công", postDTO);
 
         } catch (IOException e) {
             return ResponseHandler.response(HttpStatus.INTERNAL_SERVER_ERROR, "Tạo bài viết thất bại", e.getMessage());
