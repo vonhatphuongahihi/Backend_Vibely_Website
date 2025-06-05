@@ -33,14 +33,22 @@ import com.example.vibely_backend.dto.response.SimpleUserResponse;
 import com.example.vibely_backend.dto.response.UserInfoResponse;
 import com.example.vibely_backend.dto.response.UserProfileResponse;
 import com.example.vibely_backend.entity.Bio;
+import com.example.vibely_backend.entity.Conversation;
 import com.example.vibely_backend.entity.DocumentUser;
 import com.example.vibely_backend.entity.Level;
+import com.example.vibely_backend.entity.Post;
 import com.example.vibely_backend.entity.Provider;
+import com.example.vibely_backend.entity.Story;
 import com.example.vibely_backend.entity.Subject;
 import com.example.vibely_backend.entity.User;
 import com.example.vibely_backend.repository.BioRepository;
+import com.example.vibely_backend.repository.ConversationRepository;
 import com.example.vibely_backend.repository.DocumentRepository;
+import com.example.vibely_backend.repository.InquiryRepository;
 import com.example.vibely_backend.repository.LevelRepository;
+import com.example.vibely_backend.repository.MessageRepository;
+import com.example.vibely_backend.repository.PostRepository;
+import com.example.vibely_backend.repository.StoryRepository;
 import com.example.vibely_backend.repository.SubjectRepository;
 import com.example.vibely_backend.repository.UserRepository;
 import com.example.vibely_backend.service.oauth2.OAuth2UserDetails;
@@ -59,6 +67,21 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PostRepository postRepository;
+
+    @Autowired
+    private StoryRepository storyRepository;
+
+    @Autowired
+    private InquiryRepository inquiryRepository;
+
+    @Autowired
+    private ConversationRepository conversationRepository;
+
+    @Autowired
+    private MessageRepository messageRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -822,7 +845,113 @@ public class UserService {
     }
 
     public void deleteUserByEmail(String email) {
-        userRepository.deleteAll(userRepository.findAllByEmail(email));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+
+        String userId = user.getId();
+
+        // 1. Xóa tất cả bài viết do user tạo
+        postRepository.deleteByUserId(userId);
+
+        // 2. Xử lý các post khác có liên quan (comment, reply, reaction)
+        List<Post> relatedPosts = postRepository.findPostsWithUserActivity(userId);
+        for (Post post : relatedPosts) {
+
+            // Xóa comment do user viết
+            if (post.getComments() != null) {
+                post.getComments().removeIf(c -> c.getUserId().equals(userId));
+
+                // Xóa reply do user viết trong từng comment
+                for (Post.Comment comment : post.getComments()) {
+                    if (comment.getReplies() != null) {
+                        comment.getReplies().removeIf(r -> r.getUserId().equals(userId));
+                    }
+
+                    // Xóa reaction trong comments
+                    if (comment.getReactions() != null) {
+                        comment.getReactions().removeIf(r -> r.getUserId().equals(userId));
+                    }
+                }
+            }
+
+            // Xóa reaction của user
+            if (post.getReactions() != null) {
+                post.getReactions().removeIf(r -> r.getUserId().equals(userId));
+
+                // Cập nhật reactionStats
+                Map<String, Long> stats = post.getReactions().stream()
+                    .collect(Collectors.groupingBy(Post.Reaction::getType, Collectors.counting()));
+
+                Post.ReactionStats updatedStats = new Post.ReactionStats();
+                updatedStats.setLike(stats.getOrDefault("like", 0L).intValue());
+                updatedStats.setLove(stats.getOrDefault("love", 0L).intValue());
+                updatedStats.setHaha(stats.getOrDefault("haha", 0L).intValue());
+                updatedStats.setWow(stats.getOrDefault("wow", 0L).intValue());
+                updatedStats.setSad(stats.getOrDefault("sad", 0L).intValue());
+                updatedStats.setAngry(stats.getOrDefault("angry", 0L).intValue());
+
+                post.setReactionStats(updatedStats);
+                post.setReactionCount(post.getReactions().size());
+            } else {
+                post.setReactionStats(new Post.ReactionStats());
+                post.setReactionCount(0);
+            }
+
+            post.setCommentCount(post.getComments() != null ? post.getComments().size() : 0);
+            
+            postRepository.save(post);
+        }
+
+        // 3. Xóa tất cả story do user tạo
+        storyRepository.deleteByUserId(userId);
+
+        // 4. Xử lý các story khác có reaction của user
+        List<Story> relatedStories = storyRepository.findByReactionsUserId(userId);
+        for (Story story : relatedStories) {
+            if (story.getReactions() != null) {
+                story.getReactions().removeIf(r -> r.getUserId().equals(userId));
+            }
+            storyRepository.save(story);
+        }
+
+        // 5. Gỡ user khỏi followers/followings của người khác
+        List<User> allUsers = userRepository.findAll();
+        for (User u : allUsers) {
+            boolean modified = false;
+            if (u.getFollowers().removeIf(f -> f.equals(userId))) {
+                u.setFollowerCount(Math.max(0, u.getFollowerCount() - 1));
+                modified = true;
+            }
+            if (u.getFollowings().removeIf(f -> f.equals(userId))) {
+                u.setFollowingCount(Math.max(0, u.getFollowingCount() - 1));
+                modified = true;
+            }
+            if (modified) {
+                userRepository.save(u);
+            }
+        }
+
+        // 6. Xóa inquiry liên quan
+        inquiryRepository.deleteByUserId(userId);
+
+        // 7. Xóa hội thoại của người dùng
+        deleteConversationsAndMessagesByUserId(userId);
+
+        // 8. Xóa người dùng
+        userRepository.delete(user);
+    }
+
+    private void deleteConversationsAndMessagesByUserId(String userId) {
+        // Lấy tất cả các cuộc trò chuyện có chứa userId
+        List<Conversation> conversations = conversationRepository.findByMembersContaining(userId);
+
+        for (Conversation conversation : conversations) {
+            // Xóa tất cả message thuộc conversation
+            messageRepository.deleteByConversationId(conversation.getId());
+
+            // Xóa luôn conversation
+            conversationRepository.delete(conversation);
+        }
     }
 
     public void changePassword(String email, String oldPassword, String newPassword) {
