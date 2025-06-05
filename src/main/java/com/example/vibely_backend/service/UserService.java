@@ -227,38 +227,44 @@ public class UserService {
     }
 
     public UserInfoResponse convertToUserInfoResponse(User user) {
-        UserInfoResponse response = new UserInfoResponse();
-        response.setId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setEmail(user.getEmail());
-        response.setGender(user.getGender());
-        response.setDateOfBirth(user.getDateOfBirth());
-        response.setProfilePicture(user.getProfilePicture());
-        response.setCoverPicture(user.getCoverPicture());
-        response.setFollowers(user.getFollowers());
-        response.setFollowings(user.getFollowings());
-        response.setPosts(user.getPosts());
-        response.setLikedPosts(user.getLikedPosts());
-        response.setSavedPosts(user.getSavedPosts());
-        response.setSavedDocuments(user.getSavedDocuments());
-        response.setPostsCount(user.getPostsCount());
-        response.setFollowerCount(user.getFollowerCount());
-        response.setFollowingCount(user.getFollowingCount());
+        try {
+            UserInfoResponse response = new UserInfoResponse();
+            response.setId(user.getId());
+            response.setUsername(user.getUsername());
+            response.setEmail(user.getEmail());
+            response.setGender(user.getGender());
+            response.setDateOfBirth(user.getDateOfBirth());
+            response.setProfilePicture(user.getProfilePicture());
+            response.setCoverPicture(user.getCoverPicture());
+            response.setFollowers(user.getFollowers());
+            response.setFollowings(user.getFollowings());
+            response.setPosts(user.getPosts());
+            response.setLikedPosts(user.getLikedPosts());
+            response.setSavedPosts(user.getSavedPosts());
+            response.setSavedDocuments(user.getSavedDocuments());
+            response.setPostsCount(user.getPostsCount());
+            response.setFollowerCount(user.getFollowerCount());
+            response.setFollowingCount(user.getFollowingCount());
 
-        // Get bio from bioRepository using userId
-        Bio bio = bioRepository.findByUserId(user.getId()).orElse(null);
-        if (bio != null) {
-            BioResponse bioResponse = new BioResponse(
-                    bio.getBioText(),
-                    bio.getLiveIn(),
-                    bio.getRelationship(),
-                    bio.getWorkplace(),
-                    bio.getEducation(),
-                    bio.getHometown());
-            response.setBio(bioResponse);
+            // Get bio if exists - using findFirst to handle multiple records
+            List<Bio> bios = bioRepository.findAllByUserId(user.getId());
+            if (!bios.isEmpty()) {
+                Bio bio = bios.get(0); // Get the first bio record
+                BioResponse bioResponse = new BioResponse(
+                        bio.getBioText(),
+                        bio.getLiveIn(),
+                        bio.getRelationship(),
+                        bio.getWorkplace(),
+                        bio.getEducation(),
+                        bio.getHometown());
+                response.setBio(bioResponse);
+            }
+
+            return response;
+        } catch (Exception e) {
+            log.error("Error converting user to UserInfoResponse: ", e);
+            throw new RuntimeException("Error converting user data");
         }
-
-        return response;
     }
 
     private String getCurrentUserId() {
@@ -690,11 +696,14 @@ public class UserService {
                     user.setFollowerCount(0);
                     user.setFollowingCount(0);
                     user = userRepository.save(user);
-                    Bio bio = new Bio();
-                    bio.setUserId(user.getId());
-                    bio.setCreatedAt(new Date());
-                    bio.setUpdatedAt(new Date());
-                    bio = bioRepository.save(bio);
+                    // Không tạo Bio mới nếu đã tồn tại
+                    if (!bioRepository.findByUserId(user.getId()).isPresent()) {
+                        Bio bio = new Bio();
+                        bio.setUserId(user.getId());
+                        bio.setCreatedAt(new Date());
+                        bio.setUpdatedAt(new Date());
+                        bioRepository.save(bio);
+                    }
                     return user;
                 } else {
                     // Tạo user mới cho GitHub
@@ -721,11 +730,12 @@ public class UserService {
                     user.setFollowerCount(0);
                     user.setFollowingCount(0);
                     user = userRepository.save(user);
+                    // Tạo Bio mới chỉ khi tạo user mới
                     Bio bio = new Bio();
                     bio.setUserId(user.getId());
                     bio.setCreatedAt(new Date());
                     bio.setUpdatedAt(new Date());
-                    bio = bioRepository.save(bio);
+                    bioRepository.save(bio);
                     return user;
                 }
             }
@@ -750,11 +760,14 @@ public class UserService {
                 user.setFollowerCount(0);
                 user.setFollowingCount(0);
                 user = userRepository.save(user);
-                Bio bio = new Bio();
-                bio.setUserId(user.getId());
-                bio.setCreatedAt(new Date());
-                bio.setUpdatedAt(new Date());
-                bio = bioRepository.save(bio);
+                // Không tạo Bio mới nếu đã tồn tại
+                if (!bioRepository.findByUserId(user.getId()).isPresent()) {
+                    Bio bio = new Bio();
+                    bio.setUserId(user.getId());
+                    bio.setCreatedAt(new Date());
+                    bio.setUpdatedAt(new Date());
+                    bioRepository.save(bio);
+                }
                 return user;
             } else {
                 // Tạo user mới cho provider khác
@@ -787,11 +800,12 @@ public class UserService {
                 user.setFollowerCount(0);
                 user.setFollowingCount(0);
                 user = userRepository.save(user);
+                // Tạo Bio mới chỉ khi tạo user mới
                 Bio bio = new Bio();
                 bio.setUserId(user.getId());
                 bio.setCreatedAt(new Date());
                 bio.setUpdatedAt(new Date());
-                bio = bioRepository.save(bio);
+                bioRepository.save(bio);
                 return user;
             }
         } catch (Exception e) {
