@@ -80,7 +80,6 @@ public class GoogleCalendarService {
         if (!tokensDir.exists()) {
             boolean created = tokensDir.mkdirs();
             if (created) {
-                log.info("Đã tạo thư mục tokens thành công");
             } else {
                 log.error("Không thể tạo thư mục tokens");
                 throw new RuntimeException("Không thể tạo thư mục tokens. Vui lòng kiểm tra quyền truy cập.");

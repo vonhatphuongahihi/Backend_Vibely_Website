@@ -109,7 +109,6 @@ public class UserService {
         if (storedOtp.equals(otp)) {
             // Xóa OTP sau khi xác thực thành công
             otpStorage.remove(email);
-            log.info("Xác thực OTP thành công cho email: " + email);
             return true; // Xác thực thành công
         } else {
             log.warn("OTP không hợp lệ cho email: " + email);
@@ -648,7 +647,6 @@ public class UserService {
 
         return new ApiResponse("success", "Lấy thông tin tài liệu đã lưu thành công", response);
     }
-
 
     public ApiResponse unsaveDocument(String documentId) {
         String userId = getCurrentUserId();
