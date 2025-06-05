@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,23 +70,28 @@ public class UserController {
     }
 
     @GetMapping("/check-auth")
-    public ResponseEntity<?> checkAuth() {
+    public ResponseEntity<ApiResponse> checkAuth(Authentication authentication) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.isAuthenticated()
-                    && !"anonymousUser".equals(authentication.getPrincipal())) {
-                String email = authentication.getName();
-                return userService.findByEmail(email)
-                        .map(user -> {
-                            UserInfoResponse userResponse = userService.convertToUserInfoResponse(user);
-                            return ResponseEntity.ok(new ApiResponse("success", "User is authenticated", userResponse));
-                        })
-                        .orElse(ResponseEntity.ok(new ApiResponse("error", "User not found", null)));
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(401)
+                        .body(new ApiResponse("error", "Unauthorized", null));
             }
-            return ResponseEntity.ok(new ApiResponse("error", "User is not authenticated", null));
+
+            String email = authentication.getName();
+            Optional<User> userOpt = userService.findByEmail(email);
+
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                UserInfoResponse userInfo = userService.convertToUserInfoResponse(user);
+                return ResponseEntity.ok(new ApiResponse("success", "User authenticated", userInfo));
+            }
+
+            return ResponseEntity.status(401)
+                    .body(new ApiResponse("error", "User not found", null));
         } catch (Exception e) {
             logger.error("Error checking authentication status", e);
-            return ResponseEntity.ok(new ApiResponse("error", "Error checking authentication status", null));
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("error", "Internal server error", e.getMessage()));
         }
     }
 
