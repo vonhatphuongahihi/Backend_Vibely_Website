@@ -46,19 +46,15 @@ public class JwtFilter extends OncePerRequestFilter {
 
         try {
             String authHeader = request.getHeader("Authorization");
-            log.debug("Received Authorization header: {}", authHeader);
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                log.debug("No valid Authorization header found");
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String token = authHeader.substring(7);
-            log.debug("Extracted token: {}", token);
 
             String email = jwtService.extractEmail(token);
-            log.debug("Extracted email from token: {}", email);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = null;
@@ -83,7 +79,6 @@ public class JwtFilter extends OncePerRequestFilter {
                             userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.debug("Authentication successful for: {}", email);
                 } else {
                     log.warn("Token validation failed for: {}", email);
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
