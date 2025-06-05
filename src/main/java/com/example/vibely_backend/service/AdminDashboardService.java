@@ -44,22 +44,100 @@ public class AdminDashboardService {
     }
 
     public Map<String, Object> getDashboardStats(String timeUnit) {
-        Map<String, Object> stats = new HashMap<>();
+        try {
+            Map<String, Object> stats = new HashMap<>();
 
-        stats.put("usersStats", groupByTime(User.class, timeUnit));
-        stats.put("postsStats", groupByTime(Post.class, timeUnit));
-        stats.put("documentsStats", groupByTime(DocumentUser.class, timeUnit));
-        stats.put("inquiriesStats", groupByTime(Inquiry.class, timeUnit));
+            // Lấy dữ liệu thống kê cho từng loại
+            stats.put("usersStats", getStatsForCollection("users", timeUnit));
+            stats.put("postsStats", getStatsForCollection("posts", timeUnit));
+            stats.put("documentsStats", getStatsForCollection("documents", timeUnit));
+            stats.put("inquiriesStats", getStatsForCollection("inquiries", timeUnit));
 
-        return stats;
+            return stats;
+        } catch (Exception e) {
+            log.error("Error getting dashboard stats: ", e);
+            throw e;
+        }
+    }
+
+    private List<Map<String, Object>> getStatsForCollection(String collectionName, String timeUnit) {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime startOfYear = now.withMonth(1).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+
+            // Sửa lại cách tạo match stage
+            MatchOperation matchStage = Aggregation.match(
+                    new Criteria().andOperator(
+                            Criteria.where("created_at").exists(true),
+                            Criteria.where("created_at").ne(null),
+                            Criteria.where("created_at").gte(startOfYear)));
+
+            ProjectionOperation projectStage;
+            GroupOperation groupStage;
+            SortOperation sortStage;
+
+            switch (timeUnit.toLowerCase()) {
+                case "day":
+                    projectStage = Aggregation.project()
+                            .and(DateOperators.Year.yearOf("created_at")).as("year")
+                            .and(DateOperators.Month.monthOf("created_at")).as("month")
+                            .and(DateOperators.DayOfMonth.dayOfMonth("created_at")).as("day");
+
+                    groupStage = Aggregation.group("year", "month", "day")
+                            .count().as("count");
+
+                    sortStage = Aggregation.sort(Sort.Direction.ASC, "_id.year", "_id.month", "_id.day");
+                    break;
+
+                case "month":
+                    projectStage = Aggregation.project()
+                            .and(DateOperators.Year.yearOf("created_at")).as("year")
+                            .and(DateOperators.Month.monthOf("created_at")).as("month");
+
+                    groupStage = Aggregation.group("year", "month")
+                            .count().as("count");
+
+                    sortStage = Aggregation.sort(Sort.Direction.ASC, "_id.year", "_id.month");
+                    break;
+
+                default: // year
+                    projectStage = Aggregation.project()
+                            .and(DateOperators.Year.yearOf("created_at")).as("year");
+
+                    groupStage = Aggregation.group("year")
+                            .count().as("count");
+
+                    sortStage = Aggregation.sort(Sort.Direction.ASC, "_id.year");
+                    break;
+            }
+
+            Aggregation aggregation = Aggregation.newAggregation(
+                    matchStage, projectStage, groupStage, sortStage);
+
+            AggregationResults<Map> results = mongoTemplate.aggregate(
+                    aggregation, collectionName, Map.class);
+
+            List<Map<String, Object>> mappedResults = new ArrayList<>();
+            for (Map map : results.getMappedResults()) {
+                mappedResults.add((Map<String, Object>) map);
+            }
+
+            return mappedResults;
+        } catch (Exception e) {
+            log.error("Error getting stats for collection {}: ", collectionName, e);
+            return new ArrayList<>();
+        }
     }
 
     private List<Map<String, Object>> groupByTime(Class<?> entityClass, String timeUnit) {
-        LocalDateTime startOfYear = LocalDateTime.now().withDayOfYear(1).withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfYear = now.withMonth(1).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
         Date startDate = Date.from(startOfYear.atZone(ZoneId.systemDefault()).toInstant());
 
         MatchOperation matchStage = Aggregation.match(
-                Criteria.where("createdAt").gte(startDate));
+                Criteria.where("created_at").exists(true)
+                        .and("created_at").ne(null)
+                        .and("created_at").gte(startDate));
 
         ProjectionOperation projectStage;
         GroupOperation groupStage;
@@ -68,9 +146,9 @@ public class AdminDashboardService {
         switch (timeUnit.toLowerCase()) {
             case "day":
                 projectStage = Aggregation.project()
-                        .and(DateOperators.Year.yearOf("createdAt")).as("year")
-                        .and(DateOperators.Month.monthOf("createdAt")).as("month")
-                        .and(DateOperators.DayOfMonth.dayOfMonth("createdAt")).as("day");
+                        .and(DateOperators.Year.yearOf("created_at")).as("year")
+                        .and(DateOperators.Month.monthOf("created_at")).as("month")
+                        .and(DateOperators.DayOfMonth.dayOfMonth("created_at")).as("day");
 
                 groupStage = Aggregation.group("year", "month", "day")
                         .count().as("count");
@@ -80,8 +158,8 @@ public class AdminDashboardService {
 
             case "month":
                 projectStage = Aggregation.project()
-                        .and(DateOperators.Year.yearOf("createdAt")).as("year")
-                        .and(DateOperators.Month.monthOf("createdAt")).as("month");
+                        .and(DateOperators.Year.yearOf("created_at")).as("year")
+                        .and(DateOperators.Month.monthOf("created_at")).as("month");
 
                 groupStage = Aggregation.group("year", "month")
                         .count().as("count");
@@ -91,7 +169,7 @@ public class AdminDashboardService {
 
             default: // year
                 projectStage = Aggregation.project()
-                        .and(DateOperators.Year.yearOf("createdAt")).as("year");
+                        .and(DateOperators.Year.yearOf("created_at")).as("year");
 
                 groupStage = Aggregation.group("year")
                         .count().as("count");
@@ -112,6 +190,7 @@ public class AdminDashboardService {
         for (Map map : results.getMappedResults()) {
             mappedResults.add((Map<String, Object>) map);
         }
+
         return mappedResults;
     }
 
@@ -141,5 +220,17 @@ public class AdminDashboardService {
 
     public long getTotalInquiries() {
         return inquiryRepository.count();
+    }
+
+    public void debugData() {
+        List<User> users = userRepository.findAll();
+        if (!users.isEmpty()) {
+            User firstUser = users.get(0);
+        }
+
+        List<Post> posts = postRepository.findAll();
+        if (!posts.isEmpty()) {
+            Post firstPost = posts.get(0);
+        }
     }
 }

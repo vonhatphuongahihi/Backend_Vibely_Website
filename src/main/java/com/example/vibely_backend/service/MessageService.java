@@ -30,7 +30,6 @@ public class MessageService {
         }
 
         Message saved = messageRepository.save(message);
-        log.info("Đã lưu tin nhắn mới với ID: {}", saved.getId());
 
         // Cập nhật lastMessage và lastMessageTime cho Conversation
         if (saved.getConversationId() != null) {
@@ -38,7 +37,6 @@ public class MessageService {
                 conversation.setLastMessage(saved.getContent());
                 conversation.setLastMessageTime(saved.getCreatedAt());
                 conversationRepository.save(conversation);
-                log.info("Đã cập nhật thông tin cuộc hội thoại {}", conversation.getId());
             });
         }
 
@@ -51,7 +49,6 @@ public class MessageService {
         }
 
         List<Message> messages = messageRepository.findByConversationId(conversationId);
-        log.info("Đã lấy {} tin nhắn từ cuộc hội thoại {}", messages.size(), conversationId);
         return messages;
     }
 
@@ -73,6 +70,5 @@ public class MessageService {
         message.setRead(true);
         message.setUpdatedAt(new java.util.Date());
         messageRepository.save(message);
-        log.info("Đã đánh dấu tin nhắn {} là đã đọc bởi người dùng {}", messageId, userId);
     }
 }

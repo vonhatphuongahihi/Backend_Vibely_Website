@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -66,26 +67,26 @@ public class AdminDashboardController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getDashboardStats(@RequestParam(defaultValue = "month") String timeUnit) {
         try {
+
+            // Validate timeUnit
+            if (!Arrays.asList("day", "month", "year").contains(timeUnit.toLowerCase())) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse("error", "Invalid timeUnit. Must be one of: day, month, year", null));
+            }
+
             Map<String, Object> stats = adminDashboardService.getDashboardStats(timeUnit);
 
-            // Đảm bảo mỗi mảng stats không null và có dữ liệu
-            if (!stats.containsKey("postsStats") || stats.get("postsStats") == null) {
-                stats.put("postsStats", new ArrayList<>());
-            }
-            if (!stats.containsKey("usersStats") || stats.get("usersStats") == null) {
-                stats.put("usersStats", new ArrayList<>());
-            }
-            if (!stats.containsKey("inquiriesStats") || stats.get("inquiriesStats") == null) {
-                stats.put("inquiriesStats", new ArrayList<>());
-            }
-            if (!stats.containsKey("documentsStats") || stats.get("documentsStats") == null) {
-                stats.put("documentsStats", new ArrayList<>());
-            }
+            // Ensure all arrays exist
+            stats.putIfAbsent("postsStats", new ArrayList<>());
+            stats.putIfAbsent("usersStats", new ArrayList<>());
+            stats.putIfAbsent("inquiriesStats", new ArrayList<>());
+            stats.putIfAbsent("documentsStats", new ArrayList<>());
 
             return ResponseEntity.ok(new ApiResponse("success", "Lấy thống kê thành công", stats));
         } catch (Exception e) {
-            log.error("Lỗi khi lấy thống kê: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse("error", e.getMessage(), null));
+            log.error("Error getting dashboard stats: ", e);
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse("error", "Lỗi khi lấy thống kê: " + e.getMessage(), null));
         }
     }
 

@@ -20,11 +20,9 @@ public class DataInitializer implements CommandLineRunner {
 
         @Override
         public void run(String... args) {
-                // Thêm dữ liệu mẫu cố định
-                addStaticTrainingData();
-
-                // Thêm dữ liệu động từ database
-                chatbotTrainingService.generateDynamicTrainingData();
+                // addStaticTrainingData(); // MongoDB is down – skip for now
+                // chatbotTrainingService.generateDynamicTrainingData(); // Nếu cũng ghi DB thì
+                // comment luôn
         }
 
         private void addStaticTrainingData() {
